@@ -134,20 +134,27 @@
         </div>
 
         <!-- Checklist -->
-        <div>
-          <h3 class="font-semibold flex items-center gap-2 mt-4">
-            <i class="i-lucide-check-square" /> Việc cần làm
-          </h3>
-          <div class="bg-green-500 h-2 rounded-full mt-2 w-full" style="width: 100%"></div>
-          <div class="flex items-center gap-2 mt-2">
-            <UCheckbox model-value="true" />
-            <span>aa</span>
-          </div>
-          <UButton variant="ghost" size="xs" class="mt-2">Thêm một mục</UButton>
-        </div>
-      </div>
+<!-- Checklist -->
+<div>
+  <h3 class="font-semibold flex items-center gap-2 mt-4">
+    <i class="i-lucide-check-square" /> Việc cần làm
+  </h3>
 
-      <!-- Thêm phần này vào modal card -->
+  <div v-for="item in checklist" :key="item.id" class="flex items-center gap-2 mt-2">
+    <UCheckbox v-model="item.completed" @change="toggleChecklist(item)" />
+    <span :class="{ 'line-through text-gray-500': item.completed }">{{ item.content }}</span>
+    <UButton icon="i-lucide-trash" color="red" variant="ghost" size="xs" @click="deleteChecklist(item.id)" />
+  </div>
+
+  <div class="flex gap-2 mt-2">
+    <UInput v-model="newChecklist" placeholder="Thêm mục mới..." class="w-full" />
+    <UButton size="xs" @click="addChecklist">Thêm</UButton>
+  </div>
+</div>
+
+
+      </div>
+      <!-- Bình luận -->
 <div>
   <h3 class="font-semibold">Nhận xét</h3>
   <div v-for="comment in comments" :key="comment.id" class="text-sm mb-2">
@@ -320,7 +327,11 @@ const selectedCard = ref(null)
 function openCard(card) {
   selectedCard.value = card
   showCardModal.value = true
+  fetchComments(card.id)
+  fetchChecklist()
+
 }
+
 
 // Script setup trong modal card
 const comments = ref([])
@@ -328,13 +339,14 @@ const newComment = ref("")
 
 async function fetchComments(cardId) {
   const { data } = await useFetch(`http://localhost:3001/api/cards/${cardId}/comments`)
+  // console.log("Comments:", data.value)
   comments.value = data.value || []
 }
 
 async function addComment() {
   if (!newComment.value.trim()) return
 
-  await $fetch(`http://localhost:3001/api/cards/${selectedCard.id}/comments`, {
+  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}/comments`, {
     method: "POST",
     body: {
       content: newComment.value,
@@ -352,5 +364,45 @@ watch(() => showCardModal.value, (open) => {
     fetchComments(selectedCard.value.id)
   }
 })
+
+const checklist = ref([])
+const newChecklist = ref("")
+
+async function fetchChecklist() {
+  const res = await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}/checklist`)
+  checklist.value = res
+}
+
+async function addChecklist() {
+  if (!newChecklist.value.trim()) return
+  const res = await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}/checklist`, {
+    method: "POST",
+    body: {
+      content: newChecklist.value,
+      completed: false,
+    },
+  })
+  checklist.value.push(res)
+  newChecklist.value = ""
+}
+
+async function toggleChecklist(item) {
+  await $fetch(`http://localhost:3001/api/checklist/${item.id}`, {
+    method: "PUT",
+    body: {
+      content: item.content,
+      completed: item.completed,
+    },
+  })
+}
+
+async function deleteChecklist(id) {
+  await $fetch(`http://localhost:3001/api/checklist/${id}`, {
+    method: "DELETE",
+  })
+  checklist.value = checklist.value.filter(i => i.id !== id)
+}
+
+
 
 </script>

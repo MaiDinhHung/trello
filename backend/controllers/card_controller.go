@@ -43,6 +43,7 @@ func UpdateCard(c *fiber.Ctx) error {
 
 	var data struct {
 		Title     *string `json:"title"`
+		Description *string `json:"description"`
 		ListID    *uint   `json:"list_id"`
 		Position  *int    `json:"position"`
 		StartDate *string `json:"start_date"`
@@ -57,6 +58,9 @@ func UpdateCard(c *fiber.Ctx) error {
 
 	if data.Title != nil {
 		card.Title = *data.Title
+	}
+	if data.Description != nil {
+		card.Description = *data.Description
 	}
 	if data.ListID != nil {
 		card.ListID = *data.ListID
