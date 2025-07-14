@@ -15,5 +15,6 @@ type Card struct {
 	Labels         []Label         `json:"labels" gorm:"many2many:card_labels;"`
 	ChecklistItems []ChecklistItem `json:"checklist_items" gorm:"foreignKey:card_id"`
 	Position       int             `json:"position"`
+	// Status         string          `json:"status"`
 	ID             uint            `json:"id"`
 }

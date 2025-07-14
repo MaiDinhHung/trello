@@ -16,7 +16,10 @@
     "@iconify-json/simple-icons": "^1.2.42",
     "@nuxt/icon": "^1.15.0",
     "@nuxt/ui": "^3.2.0",
+    "@vuepic/vue-datepicker": "^11.0.2",
+    "dayjs": "^1.11.13",
     "nuxt": "^3.17.6",
+    "vue-datepicker-next": "^1.0.3",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {

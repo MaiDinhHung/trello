@@ -42,12 +42,12 @@ func UpdateCard(c *fiber.Ctx) error {
 	}
 
 	var data struct {
-		Title     *string `json:"title"`
+		Title       *string `json:"title"`
 		Description *string `json:"description"`
-		ListID    *uint   `json:"list_id"`
-		Position  *int    `json:"position"`
-		StartDate *string `json:"start_date"`
-		EndDate   *string `json:"end_date"`
+		ListID      *uint   `json:"list_id"`
+		Position    *int    `json:"position"`
+		StartDate   *string `json:"start_date"`
+		EndDate     *string `json:"end_date"`
 	}
 
 	if err := c.BodyParser(&data); err != nil {
@@ -70,7 +70,7 @@ func UpdateCard(c *fiber.Ctx) error {
 	}
 	if data.StartDate != nil {
 		card.StartDate = *data.StartDate
-	}	
+	}
 	if data.EndDate != nil {
 		card.EndDate = *data.EndDate
 	}
@@ -83,6 +83,7 @@ func UpdateCard(c *fiber.Ctx) error {
 
 	return c.JSON(card)
 }
+
 
 
 
@@ -101,3 +102,25 @@ func GetCardsByListID(c *fiber.Ctx) error {
 
 	return c.JSON(cards)
 }
+
+func DeleteCard(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	var card models.Card
+	if err := database.DB.First(&card, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Card not found",
+		})
+	}
+
+	if err := database.DB.Delete(&card).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete card",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Card deleted successfully",
+	})
+}
+

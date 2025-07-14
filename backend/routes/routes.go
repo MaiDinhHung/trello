@@ -23,6 +23,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/cards", controllers.CreateCard)
 	api.Put("/cards/:id", controllers.UpdateCard)
 	api.Get("/lists/:id/cards", controllers.GetCardsByListID)
+	api.Delete("/cards/:id", controllers.DeleteCard)
 
 	api.Post("/cards/:card_id/comments", controllers.CreateComment)
 	api.Get("/cards/:card_id/comments", controllers.GetComments)

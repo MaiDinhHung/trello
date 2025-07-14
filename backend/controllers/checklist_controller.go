@@ -29,18 +29,35 @@ func CreateChecklistItem(c *fiber.Ctx) error {
 }
 
 func UpdateChecklistItem(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var item models.ChecklistItem
-	if err := database.DB.First(&item, id).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Không tìm thấy"})
-	}
-	if err := c.BodyParser(&item); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Dữ liệu không hợp lệ"})
-	}
-	if err := database.DB.Save(&item).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Không thể cập nhật"})
-	}
-	return c.JSON(item)
+    id := c.Params("id")
+
+    var item models.ChecklistItem
+    if err := database.DB.First(&item, id).Error; err != nil {
+        return c.Status(404).JSON(fiber.Map{
+            "error": "Checklist not found",
+        })
+    }
+
+    var req struct {
+        Content   string `json:"content"`
+        Completed bool   `json:"completed"`
+    }
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    item.Content = req.Content
+    item.Completed = req.Completed
+
+    if err := database.DB.Save(&item).Error; err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "error": "Update failed",
+        })
+    }
+
+    return c.JSON(item)
 }
 
 func DeleteChecklistItem(c *fiber.Ctx) error {
