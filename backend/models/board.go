@@ -5,6 +5,6 @@ import "gorm.io/gorm"
 type Board struct {
 	gorm.Model
 	Title  string `json:"title"`
-	UserID uint   `json:"user_id"`
+	UserID uint   `json:"UserID"`
 	Lists  []List `json:"lists" gorm:"foreignKey:board_id"`
 }

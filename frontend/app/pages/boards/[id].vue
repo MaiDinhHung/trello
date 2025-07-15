@@ -6,7 +6,11 @@
         {{ board?.title || "Board" }}
       </h1>
       <div class="flex items-center gap-3">
-        <span>{{ user?.name }}</span>
+        <div
+          class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
+        >
+          <span>{{ getInitial(user?.name) }}</span>
+        </div>
         <UButton color="red" @click="logout">Đăng xuất</UButton>
       </div>
     </nav>
@@ -58,16 +62,16 @@
             <template #item="{ element }">
               <div
                 class="bg-gray-100 p-2 rounded shadow cursor-pointer flex justify-start items-center"
-                @click="openCard(element)"
               >
-              <!-- <UCheckbox 
-              v-model="element.completed"
-              @change = "toogleCheckcard(element)"
+                <UCheckbox
+                  :model-value="element.completed"
+                  @update:model-value="(val) => toggleCheckcard(element, val)"
                   class="float-right pe-1.5"
                   size="xs"
-                
-              /> -->
-                {{ element.title }}
+                />
+                <div @click="openCard(element)">
+                  {{ element.title }}
+                </div>
               </div>
             </template>
           </draggable>
@@ -137,19 +141,54 @@
         <div class="flex-1 space-y-4">
           <!-- Thành viên, nhãn, ngày -->
           <div class="flex flex-wrap items-center gap-3">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold">Thành viên:</span>
-              <div
-                class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
-              >
-                MH
+            <div class="space-y-4">
+              <h3 class="font-semibold">Thành viên</h3>
+              <ul class="space-y-2">
+              <!-- <div>{{ members }}</div> -->
+                <li
+                  v-for="member in members"
+                  :key="member.id"
+                  class="flex items-center gap-2"
+                >
+                  <div
+                    class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold"
+                  >
+                    {{ member.user.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <span>{{ member.user.name }}</span>
+                  <button
+                    @click="removeMember(member.user_id)"
+                    class="text-red-500 ml-auto"
+                  >
+                    X
+                  </button>
+                </li>
+              </ul>
+
+              <div class="mt-4 flex">
+                <h4 class="font-semibold">Thêm thành viên</h4>
+                <select
+                  v-model="selectedUserId"
+                  class="border rounded px-2 py-1 w-full"
+                >
+                  <option disabled value="">Chọn người dùng</option>
+                  <option
+                    v-for="user in allUsers"
+                    :value="user.id"
+                    :key="user.id"
+                  >
+                    <!-- {{ user.name }} -->
+                    {{ user.email }}
+                  </option>
+                </select>
+                <button
+                  @click="addMember"
+                  class="bg-blue-500 text-white rounded p-1 m-1"
+                  :disabled="!selectedUserId"
+                >
+                  Thêm
+                </button>
               </div>
-              <UButton
-                size="xs"
-                icon="i-lucide-plus"
-                color="gray"
-                variant="soft"
-              />
             </div>
 
             <div class="flex items-center gap-2">
@@ -322,9 +361,24 @@
             :key="comment.id"
             class="text-sm mb-2"
           >
-            <span class="text-gray-500">{{ comment.created_at }}</span
-            ><br />
-            {{ comment.content }}
+            <div class="flex items-center gap-1 mb-1">
+              <div
+                class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
+              >
+                {{ getInitial(comment.User.name) }}
+              </div>
+
+              <div>
+                <div class="flex">
+                  <span class="font-semibold">{{ comment.User.name }}:</span>
+                  <p class="text-black ps-1">{{ comment.content }}</p>
+                </div>
+
+                <span class="text-gray-500 font-mono">{{
+                  formatDate(comment.CreatedAt)
+                }}</span>
+              </div>
+            </div>
           </div>
           <div class="mt-2 flex gap-2">
             <UInput v-model="newComment" placeholder="Viết bình luận..." />
@@ -456,7 +510,7 @@ async function createCard(list) {
     description: "",
     start_date: "",
     end_date: "",
-    user_id: user.value?.id || 1, //// cần fix lại
+    user_id: user.value?.ID,
   };
 
   const { data, error } = await useFetch("http://localhost:3001/api/cards", {
@@ -471,13 +525,13 @@ async function createCard(list) {
   list.showAddCard = false;
 }
 
-// async function toggleCheckcard(item) {
-//   item.completed = !item.completed;
-//   await $fetch(`http://localhost:3001/api/cards/${item.id}`, {
-//     method: "PUT",
-//     body: { completed: item.completed },
-//   });
-// }
+async function toggleCheckcard(element, newValue) {
+  element.completed = newValue;
+  await $fetch(`http://localhost:3001/api/cards/${element.id}`, {
+    method: "PUT",
+    body: { completed: element.completed },
+  });
+}
 
 async function onCardDrop(event, toListId) {
   const toList = lists.value.find((list) => list.id === toListId);
@@ -516,8 +570,24 @@ async function fetchComments(cardId) {
   );
   comments.value = data.value || [];
 }
-
+// avatar
+function getInitial(name) {
+  if (!name) return "?";
+  return name.trim().charAt(0).toUpperCase();
+}
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 async function addComment() {
+  // console.log("id user", user.value?.ID);
+  // console.log("name", user.value?.name);
   if (!newComment.value.trim()) return;
   await $fetch(
     `http://localhost:3001/api/cards/${selectedCard.value.id}/comments`,
@@ -525,7 +595,7 @@ async function addComment() {
       method: "POST",
       body: {
         content: newComment.value,
-        user_id: user.value?.id || 1,
+        UserID: user.value?.ID,
       },
     }
   );
@@ -674,7 +744,7 @@ const formattedDates = computed(() => {
     day: "2-digit",
     month: "2-digit",
   });
-  const startTimeStr = start.toLocaleTimeString("vi-VN", {
+  const endTimeStr = end.toLocaleTimeString("vi-VN", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -684,7 +754,7 @@ const formattedDates = computed(() => {
     month: "2-digit",
   });
 
-  return `${startDateStr} || ${startTimeStr}   ${endDateStr}`;
+  return `${startDateStr} || ${endTimeStr}   ${endDateStr}`;
 });
 
 const dateStatus = computed(() => {
@@ -700,4 +770,53 @@ const dateStatus = computed(() => {
 
   return "normal";
 });
+
+const props = defineProps({
+  cardId: Number,
+});
+
+const members = ref([]);
+const allUsers = ref([]);
+const selectedUserId = ref("");
+
+onMounted(async () => {
+  // await fetchMembers();
+  await fetchAllUsers();
+});
+
+async function fetchMembers() {
+  const {data} = await useFetch(`http://localhost:3001/api/cards/${props.cardId}/members`);
+  members.value = data.value || [];
+  // members.value = await $fetch(
+  //   `http://localhost:3001/api/cards/${props.cardId}/members`
+  // );
+}
+
+async function fetchAllUsers() {
+  const {data} = await useFetch("http://localhost:3001/api/users");
+  allUsers.value = data.value || [];
+}
+
+async function addMember() {
+  await $fetch(`http://localhost:3001/api/cards/${props.cardId}/members`, {
+    method: "POST",
+    body: {
+      UserID: Number(selectedUserId.value),
+      role: "viewer",
+    },
+  });
+  selectedUserId.value = "";
+  await fetchMembers();
+}
+
+async function removeMember(userId) {
+  await $fetch(
+    `http://localhost:3001/api/cards/${props.cardId}/members/${userId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  await fetchMembers();
+}
+
 </script>

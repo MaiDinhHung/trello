@@ -39,6 +39,7 @@ func ConnectDB() {
 		&models.Comment{},
 		&models.Label{},
 		&models.ChecklistItem{},
+		&models.CardMember{},
 	)
 	fmt.Println("Connected to DB & Migrated")
 

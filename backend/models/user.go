@@ -7,7 +7,8 @@ type User struct {
 	Name     string    `json:"name"`
 	Email    string    `json:"email" gorm:"uniqueIndex"`
 	Password string    `json:"password"`
-	Boards   []Board   `gorm:"foreignKey:user_id"`
-	Cards    []Card    `gorm:"foreignKey:user_id"`
-	Comments []Comment `gorm:"foreignKey:user_id"`
+	Avatar   string    `json:"avatar"`
+	Boards   []Board   `gorm:"foreignKey:UserID"`
+	Cards    []Card    `gorm:"foreignKey:UserID"`
+	Comments []Comment `gorm:"foreignKey:ID"`
 }

@@ -43,3 +43,11 @@ func Login(c *fiber.Ctx) error {
 		"user":  user,
 	})
 }
+
+// func GetAllUsers(c *fiber.Ctx) error {
+// 	var users []models.User
+// 	if err := database.DB.Find(&users).Error; err != nil {
+// 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load users"})
+// 	}
+// 	return c.JSON(users)
+// }

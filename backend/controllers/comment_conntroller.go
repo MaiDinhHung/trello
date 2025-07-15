@@ -33,8 +33,9 @@ func CreateComment(c *fiber.Ctx) error {
 func GetComments(c *fiber.Ctx) error {
 	cardID := c.Params("card_id")
 	var comments []models.Comment
-
+	// database.DB.Preload("User").Where("card_id = ?", cardID).Find(&comments)
 	if err := database.DB.
+		Preload("User").
 		Where("card_id = ?", cardID).
 		Order("created_at asc").
 		Find(&comments).Error; err != nil {
