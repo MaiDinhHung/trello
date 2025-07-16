@@ -56,7 +56,7 @@
             group="cards"
             item-key="id"
             :data-list-id="list.id"
-            @end="(event) => onCardDrop(event, list.id)"
+            @change="(event) => onCardDrop(event, list.id)"
             class="flex flex-col gap-2 mb-2"
           >
             <template #item="{ element }">
@@ -72,17 +72,19 @@
                 <div @click="openCard(element)">
                   {{ element.title }}
                 </div>
+                <!-- <UButton
+                  color="none"
+                  icon="i-lucide-x"
+                  class="rounded-full"
+                  @click="deleteCard(element)"
+                /> -->
               </div>
             </template>
           </draggable>
 
           <!-- Thêm thẻ -->
           <div v-if="list.showAddCard">
-            <UInput
-              v-model="list.newCardTitle"
-              placeholder="Tên thẻ..."
-              class="mb-2"
-            />
+            <UInput v-model="list.newCardTitle" class="mb-2" />
             <div class="flex gap-2">
               <UButton size="xs" @click="createCard(list)">Thêm</UButton>
               <UButton size="xs" color="gray" @click="list.showAddCard = false"
@@ -131,7 +133,6 @@
   <UModal
     v-model:open="showCardModal"
     :title="selectedCard?.title"
-    :description="`Chi tiết thẻ công việc`"
     :close="{ color: 'gray', class: 'rounded-full' }"
     class="max-w-4xl"
   >
@@ -141,57 +142,69 @@
         <div class="flex-1 space-y-4">
           <!-- Thành viên, nhãn, ngày -->
           <div class="flex flex-wrap items-center gap-3">
-            <div class="space-y-4">
-              <h3 class="font-semibold">Thành viên</h3>
-              <ul class="space-y-2">
-              <!-- <div>{{ members }}</div> -->
-                <li
-                  v-for="member in members"
-                  :key="member.id"
-                  class="flex items-center gap-2"
+            <!-- Thành viên -->
+            <div>
+              <h3 class="text-base font-semibold mb-3">Thành viên</h3>
+              <div
+                v-for="member in members"
+                :key="member.id"
+                class="flex items-center gap-3"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center uppercase font-bold"
                 >
-                  <div
-                    class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold"
-                  >
-                    {{ member.user.name.charAt(0).toUpperCase() }}
-                  </div>
-                  <span>{{ member.user.name }}</span>
-                  <button
-                    @click="removeMember(member.user_id)"
-                    class="text-red-500 ml-auto"
-                  >
-                    X
-                  </button>
-                </li>
-              </ul>
+                  {{ getInitial(member.user.name) }}
+                </div>
+                <div class="text-sm font-medium">
+                  {{ member.user.email }}
+                </div>
 
-              <div class="mt-4 flex">
-                <h4 class="font-semibold">Thêm thành viên</h4>
-                <select
-                  v-model="selectedUserId"
-                  class="border rounded px-2 py-1 w-full"
-                >
-                  <option disabled value="">Chọn người dùng</option>
-                  <option
-                    v-for="user in allUsers"
-                    :value="user.id"
-                    :key="user.id"
-                  >
-                    <!-- {{ user.name }} -->
-                    {{ user.email }}
-                  </option>
-                </select>
-                <button
-                  @click="addMember"
-                  class="bg-blue-500 text-white rounded p-1 m-1"
-                  :disabled="!selectedUserId"
-                >
-                  Thêm
-                </button>
+                <UButton
+                  color="red"
+                  size="xs"
+                  variant="ghost"
+                  icon="i-lucide-x"
+                  class="ml-auto"
+                  @click="removeMember(member)"
+                />
               </div>
+
+              <UPopover
+                class="rounded-full"
+                title="Thành viên"
+                :close="{
+                  color: 'primary',
+                  variant: 'outline',
+                  class: 'rounded-full',
+                }"
+              >
+                <UButton
+                  icon="i-lucide-plus"
+                  color="neutral"
+                  variant="subtle"
+                />
+
+                <template #content>
+                  <div class="flex gap-2 items-center mt-2">
+                    <USelectMenu
+                      v-model="selectedUserId"
+                      :items="allUsersOptions"
+                      class="flex-1 w-48 h-8"
+                    />
+                    <UButton
+                      color="primary"
+                      variant="soft"
+                      :disabled="!selectedUserId"
+                      @click="addMember"
+                    >
+                      Thêm
+                    </UButton>
+                  </div>
+                </template>
+              </UPopover>
             </div>
 
-            <div class="flex items-center gap-2">
+            <!-- <div class="flex items-center gap-2">
               <span class="font-semibold">Nhãn:</span>
               <span class="w-6 h-6 bg-green-500 rounded" title="a"></span>
               <span class="w-6 h-6 bg-yellow-400 rounded" title="b"></span>
@@ -201,7 +214,7 @@
                 color="gray"
                 variant="soft"
               />
-            </div>
+            </div> -->
 
             <!-- Ngày -->
             <UButton
@@ -394,7 +407,6 @@
 import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import draggable from "vuedraggable";
-
 // --- State ---
 const route = useRoute();
 const router = useRouter();
@@ -447,6 +459,7 @@ onMounted(async () => {
     editing: false,
     cards: (list.cards || []).sort((a, b) => a.position - b.position),
   }));
+  await fetchAllUsers();
 });
 
 // --- List ---
@@ -510,7 +523,7 @@ async function createCard(list) {
     description: "",
     start_date: "",
     end_date: "",
-    user_id: user.value?.ID,
+    UserID: user.value?.ID,
   };
 
   const { data, error } = await useFetch("http://localhost:3001/api/cards", {
@@ -534,23 +547,37 @@ async function toggleCheckcard(element, newValue) {
 }
 
 async function onCardDrop(event, toListId) {
+  const { added, moved, removed } = event;
   const toList = lists.value.find((list) => list.id === toListId);
   if (!toList) return;
 
   await Promise.all(
-    toList.cards.map((card, i) =>
+    toList.cards.map((card, index) =>
       $fetch(`http://localhost:3001/api/cards/${card.id}`, {
         method: "PUT",
-        body: { list_id: toListId, position: i },
+        body: {
+          list_id: toListId,
+          position: index,
+        },
       })
     )
   );
 }
+// async function deleteCard(element) {
+//   if (!confirm("Bạn có chắc muốn xoá thẻ này không?")) return;
+
+//   await $fetch(`http://localhost:3001/api/cards/${element.id}`, {
+//     method: "DELETE",
+//   });
+//   cards.value = cards.value.filter((c) => c.id !== id);
+// }
 
 // --- Modal open card---
 function openCard(card) {
   selectedCard.value = card;
   showCardModal.value = true;
+  fetchMembers();
+  fetchAllUsers();
   fetchComments(card.id);
   fetchChecklist();
 }
@@ -682,8 +709,6 @@ async function saveDescription() {
 // Date
 import Datepicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
-const startDate = ref(null);
-const endDate = ref(null);
 const showDateModal = ref(false);
 const tempStartDate = ref(null);
 const tempEndDate = ref(null);
@@ -779,44 +804,50 @@ const members = ref([]);
 const allUsers = ref([]);
 const selectedUserId = ref("");
 
-onMounted(async () => {
-  // await fetchMembers();
-  await fetchAllUsers();
-});
-
 async function fetchMembers() {
-  const {data} = await useFetch(`http://localhost:3001/api/cards/${props.cardId}/members`);
+  if (!selectedCard.value?.id) return;
+  const { data } = await useFetch(
+    `http://localhost:3001/api/cards/${selectedCard.value.id}/members`
+  );
   members.value = data.value || [];
-  // members.value = await $fetch(
-  //   `http://localhost:3001/api/cards/${props.cardId}/members`
-  // );
 }
 
 async function fetchAllUsers() {
-  const {data} = await useFetch("http://localhost:3001/api/users");
+  const { data } = await useFetch("http://localhost:3001/api/users");
   allUsers.value = data.value || [];
+  // console.log("alluser", allUsers.value);
 }
-
+const allUsersOptions = computed(() =>
+  allUsers.value.map((user) => ({
+    label: user.email,
+    value: user.ID,
+  }))
+);
 async function addMember() {
-  await $fetch(`http://localhost:3001/api/cards/${props.cardId}/members`, {
-    method: "POST",
-    body: {
-      UserID: Number(selectedUserId.value),
-      role: "viewer",
-    },
-  });
-  selectedUserId.value = "";
+  if (!selectedUserId.value || !selectedCard.value?.id) return;
+  await $fetch(
+    `http://localhost:3001/api/cards/${selectedCard.value.id}/members`,
+    {
+      method: "POST",
+      body: {
+        user_id: Number(selectedUserId.value.value),
+        role: "viewer",
+      },
+    }
+  );
+  selectedUserId.value = null;
   await fetchMembers();
 }
 
-async function removeMember(userId) {
+async function removeMember(member) {
+  if (!selectedCard.value?.id || !member?.user?.ID) return;
+  // console.log(member)
   await $fetch(
-    `http://localhost:3001/api/cards/${props.cardId}/members/${userId}`,
+    `http://localhost:3001/api/cards/${selectedCard.value.id}/members/${member.user.ID}`,
     {
       method: "DELETE",
     }
   );
   await fetchMembers();
 }
-
 </script>

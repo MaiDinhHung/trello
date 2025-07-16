@@ -9,36 +9,34 @@ import (
 )
 
 func GetCardMembers(c *fiber.Ctx) error {
-	cardIdStr := c.Params("card_id")
-	cardId, err := strconv.Atoi(cardIdStr)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid card_id"})
-	}
+	cardId := c.Params("card_id")
 
 	var members []models.CardMember
-	if err := database.DB.Where("card_id = ?", uint(cardId)).Preload("User").Find(&members).Error; err != nil {
+	if err := database.DB.Preload("User").Where("card_id = ?", cardId).Find(&members).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load members"})
 	}
 
 	return c.JSON(members)
 }
 
-// Thêm thành viên vào Card
+
 func AddMemberToCard(c *fiber.Ctx) error {
-	cardIdStr := c.Params("card_id")
-	cardId, err := strconv.Atoi(cardIdStr)
+	cardId, err := strconv.Atoi(c.Params("card_id"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid card_id"})
 	}
 
-	type Request struct {
-		UserID uint   `json:"UserID"`
+	var body struct {
+		UserID uint   `json:"user_id"`
 		Role   string `json:"role"`
 	}
-
-	var body Request
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	var existing models.CardMember
+	if err := database.DB.Where("card_id = ? AND user_id = ?", cardId, body.UserID).First(&existing).Error; err == nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Member already exists in this card"})
 	}
 
 	member := models.CardMember{
@@ -51,22 +49,21 @@ func AddMemberToCard(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to add member"})
 	}
 
+	database.DB.Preload("User").First(&member, member.ID)
+
 	return c.JSON(member)
 }
 
-// Xoá thành viên ra khỏi Card
-func RemoveMemberFromCard(c *fiber.Ctx) error {
-	cardIdStr := c.Params("card_id")
-	userIdStr := c.Params("UserID")
 
-	cardId, err1 := strconv.Atoi(cardIdStr)
-	userId, err2 := strconv.Atoi(userIdStr)
+func RemoveMemberFromCard(c *fiber.Ctx) error {
+	cardId, err1 := strconv.Atoi(c.Params("card_id"))
+	userId, err2 := strconv.Atoi(c.Params("user_id"))
 
 	if err1 != nil || err2 != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid parameters"})
 	}
 
-	if err := database.DB.Where("card_id = ? AND UserID = ?", cardId, userId).Delete(&models.CardMember{}).Error; err != nil {
+	if err := database.DB.Where("card_id = ? AND user_id = ?", cardId, userId).Delete(&models.CardMember{}).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove member"})
 	}
 

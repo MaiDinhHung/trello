@@ -13,7 +13,7 @@ func SetupRoutes(app *fiber.App) {
 	auth.Post("/register", controllers.Register)
 	auth.Post("/login", controllers.Login)
 
-	// api.Get("/users", controllers.GetAllUsers)
+	api.Get("/users", controllers.GetAllUsers)
 
 	api.Get("/boards/:id", controllers.GetBoardByID)
 
@@ -37,5 +37,5 @@ func SetupRoutes(app *fiber.App) {
 
 	api.Post("/cards/:card_id/members", controllers.AddMemberToCard)
 	api.Get("/cards/:card_id/members", controllers.GetCardMembers)
-	api.Delete("/cards/:id/members/:UserId", controllers.RemoveMemberFromCard)
+	api.Delete("/cards/:card_id/members/:user_id", controllers.RemoveMemberFromCard)
 }

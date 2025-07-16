@@ -9,5 +9,5 @@ type CardMember struct {
 	CardID uint   `json:"card_id"`
 	UserID uint   `json:"UserID"`
 	Role   string `json:"role"`
-	User   User   `gorm:"foreignKey:UserID"`
-}	
+	User   User   `gorm:"foreignKey:UserID" json:"user"`
+}
