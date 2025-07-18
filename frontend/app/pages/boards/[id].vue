@@ -1,16 +1,26 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
+  <div class="min-h-screen bg-white">
     <!-- Navbar -->
-    <nav class="flex justify-between items-center px-6 py-4 bg-white shadow-sm">
-      <h1 class="text-2xl font-bold text-primary">
+    <nav
+      class="flex justify-between items-center px-6 py-4 bg-blue-300 shadow-sm h-23"
+    >
+      <h1 class="text-2xl font-bold text-black">
         {{ board?.title || "Board" }}
       </h1>
       <div class="flex items-center gap-3">
-        <div
-          class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
+        <UAvatar
+          :src="user?.avatar?.startsWith('http') ? user?.avatar : undefined"
+          :alt="user?.name"
+          :ui="{ rounded: 'full' }"
+          class="cursor-pointer"
+          size="2xl"
         >
-          <span>{{ getInitial(user?.name) }}</span>
-        </div>
+          <template #fallback>
+            <span class="text-xs font-bold uppercase">{{
+              getInitial(user?.name)
+            }}</span>
+          </template>
+        </UAvatar>
         <UButton color="red" @click="logout">Đăng xuất</UButton>
       </div>
     </nav>
@@ -21,7 +31,7 @@
         <UCard
           v-for="list in lists"
           :key="list.id"
-          class="w-64 min-h-[300px] flex-shrink-0 bg-white shadow p-4 flex flex-col justify-between"
+          class="w-68 min-h-[300px] flex-shrink-0 bg-blue-50 shadow p-4 flex flex-col justify-between"
         >
           <div class="flex justify-between items-center mb-2">
             <div v-if="!list.editing" class="flex justify-between w-full">
@@ -61,23 +71,99 @@
           >
             <template #item="{ element }">
               <div
-                class="bg-gray-100 p-2 rounded shadow cursor-pointer flex justify-start items-center"
+                @click="openCard(element)"
+                class="bg-white p-3 rounded shadow cursor-pointer space-y-2"
               >
-                <UCheckbox
-                  :model-value="element.completed"
-                  @update:model-value="(val) => toggleCheckcard(element, val)"
-                  class="float-right pe-1.5"
-                  size="xs"
-                />
-                <div @click="openCard(element)">
-                  {{ element.title }}
+                <div class="flex items-center gap-2 group w-full">
+                  <UCheckbox
+                    :model-value="element.completed"
+                    @update:model-value="(val) => toggleCheckcard(element, val)"
+                    size="xs"
+                  />
+
+                  <div class="flex-1">
+                    <div v-if="editingCardId !== element.ID">
+                      <div class="font-medium truncate cursor-pointer">
+                        {{ element.title }}
+                      </div>
+                    </div>
+
+                    <div v-else>
+                      <UInput
+                        v-model="editingTitle"
+                        @blur="saveTitle(element)"
+                        @keydown.enter.prevent="saveTitle(element)"
+                        class="w-full text-sm"
+                        autofocus
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex gap-1 opacity-0 group-hover:opacity-100 transition"
+                  >
+                    <UButton
+                      icon="i-lucide-pencil"
+                      size="xs"
+                      variant="ghost"
+                      @click.stop="startEditing(element)"
+                    />
+                    <UButton
+                      icon="i-lucide-x"
+                      size="xs"
+                      variant="ghost"
+                      @click.stop="deleteCard(element)"
+                    />
+                  </div>
                 </div>
-                <!-- <UButton
-                  color="none"
-                  icon="i-lucide-x"
-                  class="rounded-full"
-                  @click="deleteCard(element)"
-                /> -->
+
+                <div class="flex items-center">
+                  <div
+                    class="text-xs text-gray-500 flex items-center gap-1 me-1.5"
+                  >
+                    <span
+                      v-if="element.start_date && element.end_date"
+                      :class="`px-3 rounded text-sm  text-black ${getDateStatusColor(
+                        element
+                      )}`"
+                      >{{ formatDateOnCard(element.start_date) }} |
+                      {{ formatDateOnCard(element.end_date) }}
+                    </span>
+                  </div>
+
+                  <!-- <UTooltip 
+                  :content="getDateStatusColor(element)"
+                  :delay-duration="0" 
+                  text="Trạng thái thẻ">
+                    {{ formatDateOnCard(element.start_date) }} |
+                      {{ formatDateOnCard(element.end_date) }}
+                  </UTooltip> -->
+
+                  <UTooltip
+                    v-if="element.description"
+                    :delay-duration="0"
+                    text="Thẻ đã có mô tả"
+                  >
+                    <UIcon name="i-lucide-file-text" class="text-gray-600" />
+                  </UTooltip>
+                </div>
+
+                <!-- <div class="text-xs text-gray-500 flex items-center gap-1">
+  <UIcon name="i-lucide-check-square" class="text-gray-400" />
+  <span>
+    {{ element.checklist_items.filter(i => i.completed).length }} /
+    {{ element.checklist_items.length }}
+  </span>
+</div> -->
+
+                <!-- <UAvatarGroup :max="3" size="2xs" class="pe-2">
+  <UAvatar
+    v-for="member in element.members"
+    :key="member.id"
+    :src="member.user.avatar"
+    size="2xs"
+  />
+</UAvatarGroup> -->
               </div>
             </template>
           </draggable>
@@ -134,74 +220,180 @@
     v-model:open="showCardModal"
     :title="selectedCard?.title"
     :close="{ color: 'gray', class: 'rounded-full' }"
-    class="max-w-4xl"
+    class="max-w-5xl"
   >
     <template #body>
       <div class="flex flex-col md:flex-row gap-6">
         <!-- Bên trái - Thông tin thẻ -->
-        <div class="flex-1 space-y-4">
+        <div class="flex-1 space-y-4 w-500">
           <!-- Thành viên, nhãn, ngày -->
           <div class="flex flex-wrap items-center gap-3">
             <!-- Thành viên -->
             <div>
               <h3 class="text-base font-semibold mb-3">Thành viên</h3>
-              <div
-                v-for="member in members"
-                :key="member.id"
-                class="flex items-center gap-3"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center uppercase font-bold"
-                >
-                  {{ getInitial(member.user.name) }}
-                </div>
-                <div class="text-sm font-medium">
-                  {{ member.user.email }}
-                </div>
-
-                <UButton
-                  color="red"
-                  size="xs"
-                  variant="ghost"
-                  icon="i-lucide-x"
-                  class="ml-auto"
-                  @click="removeMember(member)"
-                />
-              </div>
-
-              <UPopover
-                class="rounded-full"
-                title="Thành viên"
-                :close="{
-                  color: 'primary',
-                  variant: 'outline',
-                  class: 'rounded-full',
-                }"
-              >
-                <UButton
-                  icon="i-lucide-plus"
-                  color="neutral"
-                  variant="subtle"
-                />
-
-                <template #content>
-                  <div class="flex gap-2 items-center mt-2">
-                    <USelectMenu
-                      v-model="selectedUserId"
-                      :items="allUsersOptions"
-                      class="flex-1 w-48 h-8"
-                    />
-                    <UButton
-                      color="primary"
-                      variant="soft"
-                      :disabled="!selectedUserId"
-                      @click="addMember"
+              <div class="flex align-center justify-between w-150">
+                <div class="flex align-center">
+                  <UAvatarGroup :max="4" size="xl" class="pe-2">
+                    <UAvatar
+                      v-for="member in members"
+                      :key="member.id"
+                      :src="
+                        member.user.avatar?.startsWith('http')
+                          ? member.user.avatar
+                          : undefined
+                      "
+                      :alt="member.user.name"
+                      :ui="{ rounded: 'full' }"
+                      class="cursor-pointer"
                     >
-                      Thêm
-                    </UButton>
-                  </div>
-                </template>
-              </UPopover>
+                      <template #fallback>
+                        <span class="text-xs font-bold uppercase">{{
+                          getInitial(member.user.name)
+                        }}</span>
+                      </template>
+                    </UAvatar>
+                  </UAvatarGroup>
+
+                  <UPopover
+                    class="rounded-full"
+                    title="Thành viên"
+                    :close="{
+                      color: 'primary',
+                      variant: 'outline',
+                      class: 'rounded-full',
+                    }"
+                  >
+                    <UButton
+                      icon="i-lucide-plus"
+                      color="neutral"
+                      variant="subtle"
+                      class="rounded-full"
+                      size="xl"
+                    />
+
+                    <template #content>
+                      <h4 class="text-center pt-3"><b>Thành viên</b></h4>
+                      <div class="p-3">
+                        <div class="flex gap-2 items-center mt-2 mb-3">
+                          <USelectMenu
+                            v-model="selectedUserId"
+                            :items="allUsersOptions"
+                            class="flex-1 w-48 h-8"
+                          />
+                          <UButton
+                            color="primary"
+                            variant="soft"
+                            :disabled="!selectedUserId"
+                            @click="addMember"
+                          >
+                            Thêm
+                          </UButton>
+                        </div>
+                        <div
+                          v-for="member in members"
+                          :key="member.id"
+                          class="flex items-center gap-3"
+                        >
+                          <UAvatar
+                            :src="
+                              member.user.avatar?.startsWith('http')
+                                ? member.user.avatar
+                                : undefined
+                            "
+                            :alt="member.user.name"
+                            :ui="{ rounded: 'full' }"
+                            class="cursor-pointer"
+                          >
+                            <template #fallback>
+                              <span class="text-xs font-bold uppercase">{{
+                                getInitial(member.user.name)
+                              }}</span>
+                            </template>
+                          </UAvatar>
+                          <div class="text-sm font-medium p-2">
+                            {{ member.user.email }}
+                          </div>
+
+                          <UButton
+                            color="red"
+                            size="xs"
+                            variant="ghost"
+                            icon="i-lucide-x"
+                            class="ml-auto"
+                            @click="removeMember(member)"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                  </UPopover>
+                </div>
+
+                <!-- Ngày -->
+                <UButton
+                  icon="i-lucide-calendar"
+                  @click="showDateModal = true"
+                  class="flex items-center gap-2 border-1"
+                  color="none"
+                >
+                  {{ formattedDates }}
+
+                  <template v-if="dateStatus === 'completed'">
+                    <span
+                      class="px-2 py-0.5 bg-green-500 text-white text-xs rounded"
+                    >
+                      Hoàn tất
+                    </span>
+                  </template>
+                  <template v-else-if="dateStatus === 'soon'">
+                    <span
+                      class="px-2 py-0.5 bg-yellow-400 text-white text-xs rounded"
+                    >
+                      Sắp tới hạn
+                    </span>
+                  </template>
+                  <template v-else-if="dateStatus === 'overdue'">
+                    <span
+                      class="px-2 py-0.5 bg-red-500 text-white text-xs rounded"
+                    >
+                      Quá hạn
+                    </span>
+                  </template>
+                </UButton>
+
+                <UModal
+                  v-model:open="showDateModal"
+                  title="Ngày"
+                  class="max-w-lg h-[600px]"
+                >
+                  <template #body>
+                    <div class="">
+                      <div class="space-y-2">
+                        <label class="font-semibold">Ngày bắt đầu</label>
+                        <Datepicker
+                          v-model="tempStartDate"
+                          placeholder="Chọn ngày bắt đầu"
+                        />
+                      </div>
+                      <div class="space-y-2">
+                        <label class="font-semibold">Ngày hết hạn</label>
+                        <Datepicker
+                          v-model="tempEndDate"
+                          placeholder="Chọn ngày hết hạn"
+                        />
+                      </div>
+
+                      <div class="flex gap-2 pt-5">
+                        <UButton @click="confirmDates" color="primary"
+                          >Lưu</UButton
+                        >
+                        <UButton @click="removeDates" color="gray"
+                          >Gỡ bỏ</UButton
+                        >
+                      </div>
+                    </div>
+                  </template>
+                </UModal>
+              </div>
             </div>
 
             <!-- <div class="flex items-center gap-2">
@@ -215,58 +407,6 @@
                 variant="soft"
               />
             </div> -->
-
-            <!-- Ngày -->
-            <UButton
-              icon="i-lucide-calendar"
-              @click="showDateModal = true"
-              class="flex items-center gap-2 border-1"
-              color="none"
-            >
-              {{ formattedDates }}
-
-              <template v-if="dateStatus === 'soon'">
-                <span
-                  class="px-2 py-0.5 bg-yellow-400 text-white text-xs rounded"
-                  >Sắp tới hạn</span
-                >
-              </template>
-              <template v-else-if="dateStatus === 'overdue'">
-                <span class="px-2 py-0.5 bg-red-500 text-white text-xs rounded"
-                  >Quá hạn</span
-                >
-              </template>
-            </UButton>
-
-            <UModal
-              v-model:open="showDateModal"
-              title="Ngày"
-              class="max-w-lg h-[600px]"
-            >
-              <template #body>
-                <div class="">
-                  <div class="space-y-2">
-                    <label class="font-semibold">Ngày bắt đầu</label>
-                    <Datepicker
-                      v-model="tempStartDate"
-                      placeholder="Chọn ngày bắt đầu"
-                    />
-                  </div>
-                  <div class="space-y-2">
-                    <label class="font-semibold">Ngày hết hạn</label>
-                    <Datepicker
-                      v-model="tempEndDate"
-                      placeholder="Chọn ngày hết hạn"
-                    />
-                  </div>
-
-                  <div class="flex gap-2 pt-5">
-                    <UButton @click="confirmDates" color="primary">Lưu</UButton>
-                    <UButton @click="removeDates" color="gray">Gỡ bỏ</UButton>
-                  </div>
-                </div>
-              </template>
-            </UModal>
           </div>
 
           <!-- Mô tả -->
@@ -368,19 +508,35 @@
         <div class="hidden md:block w-px bg-gray-300"></div>
         <!-- Bên phải: Bình luận -->
         <div class="md:w-1/4 w-full pl-4">
-          <h3 class="font-semibold">Nhận xét</h3>
+          <h3 class="font-semibold pb-3">Nhận xét</h3>
           <div
             v-for="comment in comments"
             :key="comment.id"
             class="text-sm mb-2"
           >
             <div class="flex items-center gap-1 mb-1">
-              <div
+              <!-- <div
                 class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
               >
                 {{ getInitial(comment.User.name) }}
-              </div>
-
+              </div> -->
+              <UAvatar
+                :src="
+                  comment.User.avatar?.startsWith('http')
+                    ? comment.User.avatar
+                    : undefined
+                "
+                :alt="comment.User.name"
+                :ui="{ rounded: 'full' }"
+                class="cursor-pointer"
+                size="xl"
+              >
+                <template #fallback>
+                  <span class="text-xs font-bold uppercase">{{
+                    getInitial(comment.User.name)
+                  }}</span>
+                </template>
+              </UAvatar>
               <div>
                 <div class="flex">
                   <span class="font-semibold">{{ comment.User.name }}:</span>
@@ -459,7 +615,6 @@ onMounted(async () => {
     editing: false,
     cards: (list.cards || []).sort((a, b) => a.position - b.position),
   }));
-  await fetchAllUsers();
 });
 
 // --- List ---
@@ -523,7 +678,7 @@ async function createCard(list) {
     description: "",
     start_date: "",
     end_date: "",
-    UserID: user.value?.ID,
+    UserID: user.value?.id,
   };
 
   const { data, error } = await useFetch("http://localhost:3001/api/cards", {
@@ -540,7 +695,7 @@ async function createCard(list) {
 
 async function toggleCheckcard(element, newValue) {
   element.completed = newValue;
-  await $fetch(`http://localhost:3001/api/cards/${element.id}`, {
+  await $fetch(`http://localhost:3001/api/cards/${element.ID}`, {
     method: "PUT",
     body: { completed: element.completed },
   });
@@ -553,7 +708,7 @@ async function onCardDrop(event, toListId) {
 
   await Promise.all(
     toList.cards.map((card, index) =>
-      $fetch(`http://localhost:3001/api/cards/${card.id}`, {
+      $fetch(`http://localhost:3001/api/cards/${card.ID}`, {
         method: "PUT",
         body: {
           list_id: toListId,
@@ -563,14 +718,39 @@ async function onCardDrop(event, toListId) {
     )
   );
 }
-// async function deleteCard(element) {
-//   if (!confirm("Bạn có chắc muốn xoá thẻ này không?")) return;
+const editingCardId = ref(null);
+const editingTitle = ref("");
 
-//   await $fetch(`http://localhost:3001/api/cards/${element.id}`, {
-//     method: "DELETE",
-//   });
-//   cards.value = cards.value.filter((c) => c.id !== id);
-// }
+function startEditing(card) {
+  editingCardId.value = card.ID;
+  editingTitle.value = card.title;
+}
+
+async function saveTitle(card) {
+  if (!editingTitle.value.trim() || editingTitle.value === card.title) {
+    editingCardId.value = null;
+    return;
+  }
+  await $fetch(`http://localhost:3001/api/cards/${card.ID}`, {
+    method: "PUT",
+    body: {
+      title: editingTitle.value,
+    },
+  });
+  card.title = editingTitle.value;
+  editingCardId.value = null;
+}
+async function deleteCard(element) {
+  if (!confirm("Bạn có chắc muốn xoá thẻ này không?")) return;
+
+  await $fetch(`http://localhost:3001/api/cards/${element.ID}`, {
+    method: "DELETE",
+  });
+  const listTarget = lists.value.find((l) => l.id === element.list_id);
+  if (listTarget) {
+    listTarget.cards = listTarget.cards.filter((c) => c.ID !== element.ID);
+  }
+}
 
 // --- Modal open card---
 function openCard(card) {
@@ -578,7 +758,7 @@ function openCard(card) {
   showCardModal.value = true;
   fetchMembers();
   fetchAllUsers();
-  fetchComments(card.id);
+  fetchComments(card.ID);
   fetchChecklist();
 }
 
@@ -612,28 +792,33 @@ function formatDate(dateStr) {
     year: "numeric",
   });
 }
+function formatDateOnCard(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
 async function addComment() {
-  // console.log("id user", user.value?.ID);
-  // console.log("name", user.value?.name);
   if (!newComment.value.trim()) return;
   await $fetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/comments`,
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/comments`,
     {
       method: "POST",
       body: {
         content: newComment.value,
-        UserID: user.value?.ID,
+        UserID: user.value?.id,
       },
     }
   );
   newComment.value = "";
-  fetchComments(selectedCard.value.id);
+  fetchComments(selectedCard.value.ID);
 }
 
 // --- Checklist ---
 async function fetchChecklist() {
   const { data } = await useFetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/checklist`
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/checklist`
   );
   checklist.value = data.value || [];
 }
@@ -641,7 +826,7 @@ async function fetchChecklist() {
 async function addChecklist() {
   if (!newChecklist.value.trim()) return;
   const res = await $fetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/checklist`,
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/checklist`,
     {
       method: "POST",
       body: {
@@ -696,7 +881,7 @@ function cancelEditDescription() {
 }
 
 async function saveDescription() {
-  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}`, {
+  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.ID}`, {
     method: "PUT",
     body: {
       description: descriptionInput.value,
@@ -727,7 +912,7 @@ watch(showCardModal, (open) => {
   }
 });
 async function confirmDates() {
-  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}`, {
+  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.ID}`, {
     method: "PUT",
     body: {
       start_date: tempStartDate.value
@@ -743,7 +928,7 @@ async function confirmDates() {
 }
 
 async function removeDates() {
-  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.id}`, {
+  await $fetch(`http://localhost:3001/api/cards/${selectedCard.value.ID}`, {
     method: "PUT",
     body: {
       start_date: null,
@@ -783,39 +968,52 @@ const formattedDates = computed(() => {
 });
 
 const dateStatus = computed(() => {
-  if (!selectedCard.value?.end_date) return "normal";
+  if (!selectedCard.value) return "normal";
+  if (selectedCard.value.completed) return "completed";
+  if (!selectedCard.value.end_date) return "normal";
 
   const now = new Date();
   const end = new Date(selectedCard.value.end_date);
 
   if (now > end) return "overdue";
 
-  const diff = (end - now) / (1000 * 60 * 60 * 24);
+  const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   if (diff <= 1) return "soon";
 
   return "normal";
 });
+function getDateStatusColor(card) {
+  if (!card) return "bg-gray-100";
+  if (card.completed) return "bg-green-400";
+  if (!card.end_date) return "bg-gray-100";
 
-const props = defineProps({
-  cardId: Number,
-});
+  const now = new Date();
+  const end = new Date(card.end_date);
+
+  if (now > end) return "bg-red-400";
+
+  const diff = (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  if (diff <= 1) return "bg-yellow-200";
+
+  return "bg-gray-100";
+}
 
 const members = ref([]);
 const allUsers = ref([]);
 const selectedUserId = ref("");
 
 async function fetchMembers() {
-  if (!selectedCard.value?.id) return;
+  if (!selectedCard.value?.ID) return;
   const { data } = await useFetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/members`
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/members`
   );
   members.value = data.value || [];
 }
 
+
 async function fetchAllUsers() {
   const { data } = await useFetch("http://localhost:3001/api/users");
   allUsers.value = data.value || [];
-  // console.log("alluser", allUsers.value);
 }
 const allUsersOptions = computed(() =>
   allUsers.value.map((user) => ({
@@ -824,9 +1022,9 @@ const allUsersOptions = computed(() =>
   }))
 );
 async function addMember() {
-  if (!selectedUserId.value || !selectedCard.value?.id) return;
+  if (!selectedUserId.value || !selectedCard.value?.ID) return;
   await $fetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/members`,
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/members`,
     {
       method: "POST",
       body: {
@@ -840,10 +1038,9 @@ async function addMember() {
 }
 
 async function removeMember(member) {
-  if (!selectedCard.value?.id || !member?.user?.ID) return;
-  // console.log(member)
+  if (!selectedCard.value?.ID || !member?.user?.ID) return;
   await $fetch(
-    `http://localhost:3001/api/cards/${selectedCard.value.id}/members/${member.user.ID}`,
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/members/${member.user.ID}`,
     {
       method: "DELETE",
     }

@@ -69,3 +69,17 @@ func RemoveMemberFromCard(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Member removed"})
 }
+
+// func getMembersByCardID(c *fiber.Ctx) error {
+// 	cardID := c.Params("id")
+// 	var members models.CardMember
+// 	err:= database.DB.Where("card_id = ?",cardID).Find(&members).Error
+	
+// 	if err != nil {
+// 		return c.Status(500).JSON(fiber.Map{
+// 			"error": "Failed to load card members",
+// 		})
+// 	}
+
+// 	return c.JSON(members)
+// }

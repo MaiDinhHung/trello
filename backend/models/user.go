@@ -11,4 +11,5 @@ type User struct {
 	Boards   []Board   `gorm:"foreignKey:UserID"`
 	Cards    []Card    `gorm:"foreignKey:UserID"`
 	Comments []Comment `gorm:"foreignKey:ID"`
+	Members  []CardMember `gorm:"foreignKey:UserID"`
 }

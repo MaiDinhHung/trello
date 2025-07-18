@@ -32,7 +32,7 @@ func CreateCard(c *fiber.Ctx) error {
 }
 
 func UpdateCard(c *fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params("ID")
 	var card models.Card
 
 	if err := database.DB.First(&card, id).Error; err != nil {
@@ -46,6 +46,7 @@ func UpdateCard(c *fiber.Ctx) error {
 		Description *string `json:"description"`
 		ListID      *uint   `json:"list_id"`
 		Position    *int    `json:"position"`
+		Completed   *bool   `json:"completed"`
 		StartDate   *string `json:"start_date"`
 		EndDate     *string `json:"end_date"`
 	}
@@ -68,6 +69,9 @@ func UpdateCard(c *fiber.Ctx) error {
 	if data.Position != nil {
 		card.Position = *data.Position
 	}
+	if data.Completed != nil {
+		card.Completed = *data.Completed
+	}
 	if data.StartDate != nil {
 		card.StartDate = *data.StartDate
 	}
@@ -84,11 +88,8 @@ func UpdateCard(c *fiber.Ctx) error {
 	return c.JSON(card)
 }
 
-
-
-
 func GetCardsByListID(c *fiber.Ctx) error {
-	listID := c.Params("id")
+	listID := c.Params("ID")
 	var cards []models.Card
 
 	if err := database.DB.
@@ -104,7 +105,7 @@ func GetCardsByListID(c *fiber.Ctx) error {
 }
 
 func DeleteCard(c *fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params("ID")
 
 	var card models.Card
 	if err := database.DB.First(&card, id).Error; err != nil {
@@ -123,4 +124,10 @@ func DeleteCard(c *fiber.Ctx) error {
 		"message": "Card deleted successfully",
 	})
 }
-
+func GetAllCards(c *fiber.Ctx) error {
+	var cards []models.Card
+	if err := database.DB.Find(&cards).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load cards"})
+	}
+	return c.JSON(cards)
+}
