@@ -1,9 +1,11 @@
 package controllers
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"trello/database"
 	"trello/models"
+
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 func CreateList(c *fiber.Ctx) error {
@@ -29,8 +31,15 @@ func GetListsByBoardID(c *fiber.Ctx) error {
 	var lists []models.List
 
 	if err := database.DB.
-		Preload("Cards").
+		Preload("Cards", func(db *gorm.DB) *gorm.DB {
+			return db.
+				Order("position ASC").
+				Preload("Member.User").
+				Preload("Comments").
+				Preload("ChecklistItems")
+		}).
 		Where("board_id = ?", boardID).
+		Order("position ASC").
 		Find(&lists).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Không lấy được danh sách cột"})
 	}
@@ -55,7 +64,7 @@ func UpdateList(c *fiber.Ctx) error {
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid input",
-		})	
+		})
 	}
 
 	list.Title = data.Title
@@ -69,7 +78,6 @@ func UpdateList(c *fiber.Ctx) error {
 	return c.JSON(list)
 }
 
-
 func DeleteList(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -81,4 +89,3 @@ func DeleteList(c *fiber.Ctx) error {
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
-

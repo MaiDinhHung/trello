@@ -8,11 +8,49 @@
         {{ board?.title || "Board" }}
       </h1>
       <div class="flex items-center gap-3">
+        <UPopover
+          v-model:open="open"
+          :dismissible="false"
+          :ui="{ content: 'p-4' }"
+        >
+          <UButton icon="i-lucide-filter" color="neutral" variant="subtle" />
+
+          <template #content>
+            <div class="flex items-center justify-between gap-4 mb-6">
+              <h2 class="text-highlighted font-semibold">
+                Bộ lọc
+              </h2>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-x"
+                @click="open = false"
+              />
+            </div>
+            <div>
+            <h2 class="mb-1">Từ khóa</h2>
+            <UInput v-model="filter.keyword"class="mb-6" icon="i-lucide-search" type="search" placeholder="Nhập từ khóa..."/>
+            </div>
+              <div class="">
+              <h2 class="mb-2">Trạng thái</h2>
+              <UCheckbox v-model="filter.completed" label="Đã đánh dấu hoàn thành" size="xl" font="xl" class="mb-2"></UCheckbox>
+              <UCheckbox v-model="filter.incompleted" label="Không được đánh dấu hoàn thành" size="xl" font="xl" class="mb-4"></UCheckbox>
+              <h2 class="mb-2">Ngày hết hạn</h2>
+              <UCheckbox v-model="filter.noDueDate" label="Không có ngày hết hạn" size="xl" font="xl" class="mb-2"></UCheckbox>
+              <UCheckbox v-model="filter.dueTomorrow" label="Sẽ hết hạn vào ngày mai" size="xl" font="xl" class="mb-2"></UCheckbox>
+              <UCheckbox v-model="filter.overdue" label="Quá hạn" size="xl" font="xl"></UCheckbox>
+              <!-- <UCheckbox v-model="filter." label="Hết hạn vào tuần sau" size="xl" font="xl"></UCheckbox>
+              <UCheckbox v-model="filter." label="Hết hạn vào tháng sau" size="xl" font="xl"></UCheckbox> -->
+              </div>
+
+            <Placeholder class="size-full min-h-48" />
+          </template>
+        </UPopover>
         <UAvatar
           :src="user?.avatar?.startsWith('http') ? user?.avatar : undefined"
           :alt="user?.name"
           :ui="{ rounded: 'full' }"
-          class="cursor-pointer"
+          class="cursor-pointer ms-5"
           size="2xl"
         >
           <template #fallback>
@@ -71,23 +109,22 @@
           >
             <template #item="{ element }">
               <div
-                @click="openCard(element)"
+                v-if="checkVisible(element)"
                 class="bg-white p-3 rounded shadow cursor-pointer space-y-2"
               >
+                <!-- Title & Actions -->
                 <div class="flex items-center gap-2 group w-full">
                   <UCheckbox
                     :model-value="element.completed"
                     @update:model-value="(val) => toggleCheckcard(element, val)"
                     size="xs"
                   />
-
                   <div class="flex-1">
-                    <div v-if="editingCardId !== element.ID">
+                    <div v-if="editingCardId !== element.ID" @click="openCard(element)">
                       <div class="font-medium truncate cursor-pointer">
                         {{ element.title }}
                       </div>
                     </div>
-
                     <div v-else>
                       <UInput
                         v-model="editingTitle"
@@ -117,27 +154,23 @@
                   </div>
                 </div>
 
+                <!-- Dates -->
                 <div class="flex items-center">
                   <div
                     class="text-xs text-gray-500 flex items-center gap-1 me-1.5"
                   >
                     <span
+                    class="flex items-center"
                       v-if="element.start_date && element.end_date"
                       :class="`px-3 rounded text-sm  text-black ${getDateStatusColor(
                         element
                       )}`"
-                      >{{ formatDateOnCard(element.start_date) }} |
+                    >
+                    <UIcon name="i-heroicons-clock" class="size-4 me-0.5"/>
+                      {{ formatDateOnCard(element.start_date) }} |
                       {{ formatDateOnCard(element.end_date) }}
                     </span>
                   </div>
-
-                  <!-- <UTooltip 
-                  :content="getDateStatusColor(element)"
-                  :delay-duration="0" 
-                  text="Trạng thái thẻ">
-                    {{ formatDateOnCard(element.start_date) }} |
-                      {{ formatDateOnCard(element.end_date) }}
-                  </UTooltip> -->
 
                   <UTooltip
                     v-if="element.description"
@@ -148,22 +181,35 @@
                   </UTooltip>
                 </div>
 
-                <!-- <div class="text-xs text-gray-500 flex items-center gap-1">
-  <UIcon name="i-lucide-check-square" class="text-gray-400" />
-  <span>
-    {{ element.checklist_items.filter(i => i.completed).length }} /
-    {{ element.checklist_items.length }}
-  </span>
-</div> -->
+                <!-- Checklist count -->
+                <div class="text-xs text-gray-500 flex items-center gap-2">
+                  <UIcon name="i-lucide-check-square" class="text-gray-400" />
+                  <span>
+                    {{
+                      element.checklist_items?.filter((i) => i.completed)
+                        .length || 0
+                    }}
+                    /
+                    {{ element.checklist_items?.length || 0 }}
+                  </span>
 
-                <!-- <UAvatarGroup :max="3" size="2xs" class="pe-2">
-  <UAvatar
-    v-for="member in element.members"
-    :key="member.id"
-    :src="member.user.avatar"
-    size="2xs"
-  />
-</UAvatarGroup> -->
+                  <!-- Comment count -->
+                  <UIcon
+                    name="i-lucide-message-circle"
+                    class="text-gray-400 ms-2"
+                  />
+                  <span>{{ element.comments?.length || 0 }}</span>
+                </div>
+
+                <!-- Members avatar -->
+                <UAvatarGroup :max="3" size="2xs" class="pe-2">
+                  <UAvatar
+                    v-for="member in element.members || []"
+                    :key="member.id"
+                    :src="member.user.avatar"
+                    size="2xs"
+                  />
+                </UAvatarGroup>
               </div>
             </template>
           </draggable>
@@ -587,6 +633,7 @@ const newChecklist = ref("");
 const editingDescription = ref(false);
 const descriptionInput = ref("");
 
+const open = ref(false);
 // --- Auth ---
 function logout() {
   if (!confirm("Bạn có chắc muốn đăng xuất không?")) return;
@@ -964,7 +1011,7 @@ const formattedDates = computed(() => {
     month: "2-digit",
   });
 
-  return `${startDateStr} || ${endTimeStr}   ${endDateStr}`;
+  return `${startDateStr} || ${endTimeStr}  ${endDateStr}`;
 });
 
 const dateStatus = computed(() => {
@@ -1010,7 +1057,6 @@ async function fetchMembers() {
   members.value = data.value || [];
 }
 
-
 async function fetchAllUsers() {
   const { data } = await useFetch("http://localhost:3001/api/users");
   allUsers.value = data.value || [];
@@ -1047,4 +1093,66 @@ async function removeMember(member) {
   );
   await fetchMembers();
 }
+const props = defineProps(["card"]);
+
+
+const filter = reactive({
+  keyword: '',
+  completed: false,
+  incompleted: false,
+  noDueDate: false,
+  dueTomorrow: false,
+  overdue: false
+});
+
+function checkVisible(card) {
+  if (filter.keyword && !card.title.toLowerCase().includes(filter.keyword.toLowerCase())) {
+    return false;
+  }
+
+  if (filter.completed  && !card.completed) return false;
+if (filter.incompleted  && card.completed) return false;
+
+  const now = new Date();
+  const end = card.end_date ? new Date(card.end_date) : null;
+  const diff = end ? (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24) : null;
+
+  const matchDueFilters = [];
+
+  if (filter.noDueDate) {
+    matchDueFilters.push(!end);
+  }
+  if (filter.dueTomorrow) {
+    matchDueFilters.push(end && diff <= 1 && diff > 0);
+  }
+  if (filter.overdue) {
+    matchDueFilters.push(end && now > end && !card.completed);
+  }
+
+  if (
+    filter.noDueDate ||
+    filter.dueTomorrow ||
+    filter.overdue
+  ) {
+    // Nếu có tick ít nhất 1 filter ngày, phải match ít nhất 1
+    if (!matchDueFilters.some(Boolean)) return false;
+  }
+
+  return true;
+}
+watch(
+  () => filter.completed,
+  (val) => {
+    if (val) filter.incompleted = false
+  }
+)
+
+watch(
+  () => filter.incompleted,
+  (val) => {
+    if (val) filter.completed = false
+  }
+)
+
+
 </script>
