@@ -6,7 +6,7 @@ import (
 
 type CardMember struct {
 	gorm.Model
-	CardID uint   `json:"card_id"`
+	CardID uint   `json:"CardID"`
 	UserID uint   `json:"UserID"`
 	Role   string `json:"role"`
 	User   User   `gorm:"foreignKey:UserID" json:"user"`

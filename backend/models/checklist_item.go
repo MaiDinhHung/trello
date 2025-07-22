@@ -10,5 +10,5 @@ type ChecklistItem struct {
 	ID      uint   `json:"id"`
 	Content   string         `json:"content"`
 	Completed bool           `json:"completed"`
-	CardID    uint           `json:"card_id"`
+	CardID    uint           `json:"CardID"`
 }

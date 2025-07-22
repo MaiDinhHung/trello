@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+	// "gorm.io/gorm"
 )
 
 func CreateList(c *fiber.Ctx) error {
@@ -25,6 +26,7 @@ func CreateList(c *fiber.Ctx) error {
 
 	return c.JSON(list)
 }
+
 func GetListsByBoardID(c *fiber.Ctx) error {
 	boardID := c.Params("id")
 
@@ -34,7 +36,7 @@ func GetListsByBoardID(c *fiber.Ctx) error {
 		Preload("Cards", func(db *gorm.DB) *gorm.DB {
 			return db.
 				Order("position ASC").
-				Preload("Member.User").
+				Preload("Members.User").
 				Preload("Comments").
 				Preload("ChecklistItems")
 		}).
@@ -44,8 +46,9 @@ func GetListsByBoardID(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Không lấy được danh sách cột"})
 	}
 
-	return c.JSON(lists)
-}
+		return c.JSON(lists)
+	}
+
 
 func UpdateList(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -58,7 +61,8 @@ func UpdateList(c *fiber.Ctx) error {
 	}
 
 	var data struct {
-		Title string `json:"title"`
+		Title    string `json:"title"`
+		Position int    `json:"position"`
 	}
 
 	if err := c.BodyParser(&data); err != nil {
@@ -67,7 +71,13 @@ func UpdateList(c *fiber.Ctx) error {
 		})
 	}
 
-	list.Title = data.Title
+	if data.Title != "" {
+		list.Title = data.Title
+	}
+
+	if data.Position >= 0 {
+		list.Position = data.Position
+	}
 
 	if err := database.DB.Save(&list).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

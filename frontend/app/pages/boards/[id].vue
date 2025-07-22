@@ -17,9 +17,7 @@
 
           <template #content>
             <div class="flex items-center justify-between gap-4 mb-6">
-              <h2 class="text-highlighted font-semibold">
-                Bộ lọc
-              </h2>
+              <h2 class="text-highlighted font-semibold">Bộ lọc</h2>
               <UButton
                 color="neutral"
                 variant="ghost"
@@ -28,211 +26,348 @@
               />
             </div>
             <div>
-            <h2 class="mb-1">Từ khóa</h2>
-            <UInput v-model="filter.keyword"class="mb-6" icon="i-lucide-search" type="search" placeholder="Nhập từ khóa..."/>
+              <h2 class="mb-1">Từ khóa</h2>
+              <UInput
+                v-model="filter.keyword"
+                class="mb-6"
+                icon="i-lucide-search"
+                type="search"
+                placeholder="Nhập từ khóa..."
+              />
             </div>
-              <div class="">
+            <div class="">
+            <h2 class="mb-2">Thành viên</h2>
+              <UCheckbox
+                v-model="filter.noMembers"
+                label="Không có thành viên"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              />
+              <!-- <UCheckbox
+                v-model="filter.assignedToMe"
+                label="Được chỉ định cho tôi"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              />
+              <USelectMenu
+                v-model="filter.memberId"
+                :items="allUsersOptions"
+                placeholder="Chọn thành viên"
+                
+              /> -->
               <h2 class="mb-2">Trạng thái</h2>
-              <UCheckbox v-model="filter.completed" label="Đã đánh dấu hoàn thành" size="xl" font="xl" class="mb-2"></UCheckbox>
-              <UCheckbox v-model="filter.incompleted" label="Không được đánh dấu hoàn thành" size="xl" font="xl" class="mb-4"></UCheckbox>
+              <UCheckbox
+                v-model="filter.completed"
+                label="Đã đánh dấu hoàn thành"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              ></UCheckbox>
+              <UCheckbox
+                v-model="filter.incompleted"
+                label="Không được đánh dấu hoàn thành"
+                size="xl"
+                font="xl"
+                class="mb-4"
+              ></UCheckbox>
               <h2 class="mb-2">Ngày hết hạn</h2>
-              <UCheckbox v-model="filter.noDueDate" label="Không có ngày hết hạn" size="xl" font="xl" class="mb-2"></UCheckbox>
-              <UCheckbox v-model="filter.dueTomorrow" label="Sẽ hết hạn vào ngày mai" size="xl" font="xl" class="mb-2"></UCheckbox>
-              <UCheckbox v-model="filter.overdue" label="Quá hạn" size="xl" font="xl"></UCheckbox>
-              <!-- <UCheckbox v-model="filter." label="Hết hạn vào tuần sau" size="xl" font="xl"></UCheckbox>
-              <UCheckbox v-model="filter." label="Hết hạn vào tháng sau" size="xl" font="xl"></UCheckbox> -->
-              </div>
-
-            <Placeholder class="size-full min-h-48" />
+              <UCheckbox
+                v-model="filter.noDueDate"
+                label="Không có ngày hết hạn"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              ></UCheckbox>
+              <UCheckbox
+                v-model="filter.overdue"
+                label="Quá hạn"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              ></UCheckbox>
+              <UCheckbox
+                v-model="filter.dueTomorrow"
+                label="Sẽ hết hạn vào ngày mai"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              ></UCheckbox>
+              <UCheckbox
+                v-model="filter.expireNextWeek"
+                label="Hết hạn vào tuần sau"
+                size="xl"
+                font="xl"
+                class="mb-2"
+              ></UCheckbox>
+              <UCheckbox
+                v-model="filter.expireNextMonth"
+                label="Hết hạn vào tháng sau"
+                size="xl"
+                font="xl"
+                class="mb-4"
+              ></UCheckbox>
+              
+            </div>
           </template>
         </UPopover>
         <UAvatar
-          :src="user?.avatar?.startsWith('http') ? user?.avatar : undefined"
+          :src="user?.avatar?.startsWith('https') ? user?.avatar : undefined"
           :alt="user?.name"
           :ui="{ rounded: 'full' }"
           class="cursor-pointer ms-5"
           size="2xl"
         >
-          <template #fallback>
-            <span class="text-xs font-bold uppercase">{{
-              getInitial(user?.name)
-            }}</span>
-          </template>
         </UAvatar>
         <UButton color="red" @click="logout">Đăng xuất</UButton>
       </div>
     </nav>
 
     <!-- Board content -->
-    <div class="p-4">
+
+    <div class="p-4 w-full">
       <div class="flex gap-4 overflow-x-auto">
-        <UCard
-          v-for="list in lists"
-          :key="list.id"
-          class="w-68 min-h-[300px] flex-shrink-0 bg-blue-50 shadow p-4 flex flex-col justify-between"
+        <!-- Kéo thả cột (list) -->
+        <draggable
+          v-model="lists"
+          item-key="id"
+          direction="horizontal"
+          class="flex gap-4"
+          @change="onListDrop"
         >
-          <div class="flex justify-between items-center mb-2">
-            <div v-if="!list.editing" class="flex justify-between w-full">
-              <h3 class="font-extrabold text-xl">{{ list.title }}</h3>
-              <div class="flex gap-1">
-                <button
-                  class="text-xs text-blue-500"
-                  @click="list.editing = true"
+          <template #item="{ element }">
+            <UCard
+              class="w-68 min-h-[300px] flex-shrink-0 bg-blue-50 shadow p-4 flex flex-col justify-between"
+            >
+              <div class="flex justify-between items-center mb-2 group">
+                <div
+                  v-if="editingListId !== element.id"
+                  class="flex justify-between w-full"
                 >
-                  Sửa
-                </button>
-                <button
-                  class="text-xs text-red-500"
-                  @click="deleteList(list.id)"
-                >
-                  Xóa
-                </button>
-              </div>
-            </div>
-            <div v-else class="flex gap-2 w-full">
-              <UInput v-model="list.title" size="xs" class="w-full" />
-              <UButton size="xs" @click="updateList(list)">Lưu</UButton>
-              <UButton size="xs" color="gray" @click="list.editing = false"
-                >Hủy</UButton
-              >
-            </div>
-          </div>
-
-          <!-- Thẻ (cards) -->
-          <draggable
-            v-model="list.cards"
-            group="cards"
-            item-key="id"
-            :data-list-id="list.id"
-            @change="(event) => onCardDrop(event, list.id)"
-            class="flex flex-col gap-2 mb-2"
-          >
-            <template #item="{ element }">
-              <div
-                v-if="checkVisible(element)"
-                class="bg-white p-3 rounded shadow cursor-pointer space-y-2"
-              >
-                <!-- Title & Actions -->
-                <div class="flex items-center gap-2 group w-full">
-                  <UCheckbox
-                    :model-value="element.completed"
-                    @update:model-value="(val) => toggleCheckcard(element, val)"
-                    size="xs"
-                  />
-                  <div class="flex-1">
-                    <div v-if="editingCardId !== element.ID" @click="openCard(element)">
-                      <div class="font-medium truncate cursor-pointer">
-                        {{ element.title }}
-                      </div>
-                    </div>
-                    <div v-else>
-                      <UInput
-                        v-model="editingTitle"
-                        @blur="saveTitle(element)"
-                        @keydown.enter.prevent="saveTitle(element)"
-                        class="w-full text-sm"
-                        autofocus
-                      />
-                    </div>
-                  </div>
-
-                  <div
-                    class="flex gap-1 opacity-0 group-hover:opacity-100 transition"
-                  >
+                  <h3 class="font-extrabold text-xl truncate cursor-pointer">
+                    {{ element.title }}
+                  </h3>
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100">
                     <UButton
                       icon="i-lucide-pencil"
+                      color="info"
                       size="xs"
                       variant="ghost"
-                      @click.stop="startEditing(element)"
+                      @click.stop="startEditingList(element)"
                     />
                     <UButton
-                      icon="i-lucide-x"
+                      icon="i-lucide-trash"
+                      color="error"
                       size="xs"
                       variant="ghost"
-                      @click.stop="deleteCard(element)"
+                      @click.stop="deleteList(element.id)"
                     />
                   </div>
                 </div>
-
-                <!-- Dates -->
-                <div class="flex items-center">
-                  <div
-                    class="text-xs text-gray-500 flex items-center gap-1 me-1.5"
-                  >
-                    <span
-                    class="flex items-center"
-                      v-if="element.start_date && element.end_date"
-                      :class="`px-3 rounded text-sm  text-black ${getDateStatusColor(
-                        element
-                      )}`"
-                    >
-                    <UIcon name="i-heroicons-clock" class="size-4 me-0.5"/>
-                      {{ formatDateOnCard(element.start_date) }} |
-                      {{ formatDateOnCard(element.end_date) }}
-                    </span>
-                  </div>
-
-                  <UTooltip
-                    v-if="element.description"
-                    :delay-duration="0"
-                    text="Thẻ đã có mô tả"
-                  >
-                    <UIcon name="i-lucide-file-text" class="text-gray-600" />
-                  </UTooltip>
-                </div>
-
-                <!-- Checklist count -->
-                <div class="text-xs text-gray-500 flex items-center gap-2">
-                  <UIcon name="i-lucide-check-square" class="text-gray-400" />
-                  <span>
-                    {{
-                      element.checklist_items?.filter((i) => i.completed)
-                        .length || 0
-                    }}
-                    /
-                    {{ element.checklist_items?.length || 0 }}
-                  </span>
-
-                  <!-- Comment count -->
-                  <UIcon
-                    name="i-lucide-message-circle"
-                    class="text-gray-400 ms-2"
+                <div v-else class="flex gap-2 w-full">
+                  <UInput
+                    v-model="editingListTitle"
+                    size="xs"
+                    class="w-full"
+                    @blur="saveList(element)"
+                    @keydown.enter.prevent="saveList(element)"
+                    @keydown.esc.prevent="cancelEditList"
+                    autofocus
                   />
-                  <span>{{ element.comments?.length || 0 }}</span>
                 </div>
-
-                <!-- Members avatar -->
-                <UAvatarGroup :max="3" size="2xs" class="pe-2">
-                  <UAvatar
-                    v-for="member in element.members || []"
-                    :key="member.id"
-                    :src="member.user.avatar"
-                    size="2xs"
-                  />
-                </UAvatarGroup>
               </div>
-            </template>
-          </draggable>
 
-          <!-- Thêm thẻ -->
-          <div v-if="list.showAddCard">
-            <UInput v-model="list.newCardTitle" class="mb-2" />
-            <div class="flex gap-2">
-              <UButton size="xs" @click="createCard(list)">Thêm</UButton>
-              <UButton size="xs" color="gray" @click="list.showAddCard = false"
-                >Hủy</UButton
+              <!-- Kéo thả card bên trong -->
+              <draggable
+                v-model="element.cards"
+                group="cards"
+                item-key="id"
+                :data-list-id="element.id"
+                @change="(event) => onCardDrop(event, element.id)"
+                class="flex flex-col gap-2 mb-2"
               >
-            </div>
-          </div>
-          <div v-else>
-            <button
-              class="text-sm text-gray-500 hover:text-primary"
-              @click="list.showAddCard = true"
-            >
-              + Thêm thẻ
-            </button>
-          </div>
-        </UCard>
+                <template #item="{ element: card }">
+                  <div
+                    v-if="checkVisible(card)"
+                    class="bg-white p-3 rounded-2xl shadow cursor-pointer space-y-2 w-full"
+                  >
+                    <!-- Checkbox & title -->
+                    <div class="flex items-center gap-2 group w-full">
+                      <UTooltip
+                        :text="
+                          card.completed
+                            ? 'Đánh dấu chưa hoàn tất'
+                            : 'Đánh dấu hoàn tất'
+                        "
+                        :delay-duration="0"
+                      >
+                        <UCheckbox
+                          :model-value="card.completed"
+                          @update:model-value="
+                            (val) => toggleCheckcard(card, val)
+                          "
+                          size="sm"
+                          class=""
+                        />
+                      </UTooltip>
+
+                      <div class="flex-1">
+                        <div
+                          v-if="editingCardId !== card.ID"
+                          @click="openCard(card)"
+                        >
+                          <div class="font-medium truncate cursor-pointer">
+                            {{ card.title }}
+                          </div>
+                        </div>
+                        <div v-else>
+                          <UInput
+                            v-model="editingTitle"
+                            @blur="saveTitle(card)"
+                            @keydown.enter.prevent="saveTitle(card)"
+                            class="w-full text-sm"
+                            autofocus
+                          />
+                        </div>
+                      </div>
+                      <div
+                        class="flex gap-1 opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <UButton
+                          icon="i-lucide-pencil"
+                          color="info"
+                          size="xs"
+                          variant="ghost"
+                          @click.stop="startEditing(card)"
+                        />
+                        <UButton
+                          icon="i-lucide-trash"
+                          color="error"
+                          size="xs"
+                          variant="ghost"
+                          @click.stop="deleteCard(card)"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Dates -->
+                    <div class="flex items-center">
+                      <UTooltip :text="tooltipDate(card)">
+                        <div
+                          class="text-xs text-gray-500 flex items-center gap-1 me-1.5"
+                        >
+                          <span
+                            v-if="card.start_date && card.end_date"
+                            :class="`flex items-center px-3 rounded text-sm text-black ${getDateStatusColor(
+                              card
+                            )}`"
+                          >
+                            <UIcon
+                              name="i-heroicons-clock"
+                              class="size-4 me-0.5"
+                            />
+                            {{ formatDateOnCard(card.start_date) }} |
+                            {{ formatDateOnCard(card.end_date) }}
+                          </span>
+                        </div>
+                      </UTooltip>
+
+                      <UTooltip
+                        v-if="card.description"
+                        :delay-duration="0"
+                        text="Thẻ đã có mô tả"
+                      >
+                        <UIcon
+                          name="i-lucide-file-text"
+                          class="text-gray-600"
+                        />
+                      </UTooltip>
+                    </div>
+
+                    <!-- Checklist + comment count -->
+                    <div class="text-xs text-gray-500 flex items-center gap-2">
+                      <UTooltip
+                        v-if="card.checklist_items?.length"
+                        text="Mục trong danh sách công việc"
+                      >
+                        <div class="flex items-center gap-1">
+                          <UIcon
+                            name="i-lucide-check-square"
+                            :class="{
+                              'text-green-500':
+                                card.checklist_items?.length > 0 &&
+                                card.checklist_items?.filter((i) => i.completed)
+                                  .length === card.checklist_items?.length,
+                              'text-gray-400': !(
+                                card.checklist_items?.length > 0 &&
+                                card.checklist_items?.filter((i) => i.completed)
+                                  .length === card.checklist_items?.length
+                              ),
+                            }"
+                          />
+                          <span>
+                            {{
+                              card.checklist_items?.filter((i) => i.completed)
+                                .length || 0
+                            }}/
+                            {{ card.checklist_items?.length || 0 }}
+                          </span>
+                        </div>
+                      </UTooltip>
+
+                      <UTooltip v-if="card.comments?.length" text="Bình luận">
+                        <div class="flex items-center gap-1">
+                          <UIcon
+                            name="i-lucide-message-circle"
+                            class="text-gray-400 ms-2"
+                          />
+                          <span>{{ card.comments?.length || 0 }}</span>
+                        </div>
+                      </UTooltip>
+                    </div>
+
+                    <!-- Members -->
+                    <UTooltip v-if="card.members?.length" text="Thành viên">
+                      <div class="flex justify-end">
+                        <UAvatarGroup :max="3" size="4xs" class="pe-2">
+                          <UAvatar
+                            v-for="member in card.members || []"
+                            :key="member.id"
+                            :src="member.user.avatar"
+                            size="2xs"
+                          />
+                        </UAvatarGroup>
+                      </div>
+                    </UTooltip>
+                  </div>
+                </template>
+              </draggable>
+
+              <!-- Thêm thẻ -->
+              <div v-if="element.showAddCard">
+                <UInput v-model="element.newCardTitle" class="mb-2" />
+                <div class="flex gap-2">
+                  <UButton size="xs" @click="createCard(element)">Thêm</UButton>
+                  <UButton
+                    size="xs"
+                    color="gray"
+                    @click="element.showAddCard = false"
+                    >Hủy</UButton
+                  >
+                </div>
+              </div>
+              <div v-else>
+                <button
+                  class="text-sm text-gray-500 hover:text-primary"
+                  @click="element.showAddCard = true"
+                >
+                  + Thêm thẻ
+                </button>
+              </div>
+            </UCard>
+          </template>
+        </draggable>
 
         <!-- Thêm cột mới -->
         <UCard
@@ -242,7 +377,6 @@
         >
           <span>+ Tạo cột mới</span>
         </UCard>
-
         <UCard
           v-else
           class="w-64 h-96 flex flex-col p-4 justify-between flex-shrink-0 border border-gray-300"
@@ -279,7 +413,7 @@
               <h3 class="text-base font-semibold mb-3">Thành viên</h3>
               <div class="flex align-center justify-between w-150">
                 <div class="flex align-center">
-                  <UAvatarGroup :max="4" size="xl" class="pe-2">
+                  <UAvatarGroup :max="5" size="xl" class="pe-2">
                     <UAvatar
                       v-for="member in members"
                       :key="member.id"
@@ -292,11 +426,6 @@
                       :ui="{ rounded: 'full' }"
                       class="cursor-pointer"
                     >
-                      <template #fallback>
-                        <span class="text-xs font-bold uppercase">{{
-                          getInitial(member.user.name)
-                        }}</span>
-                      </template>
                     </UAvatar>
                   </UAvatarGroup>
 
@@ -350,11 +479,6 @@
                             :ui="{ rounded: 'full' }"
                             class="cursor-pointer"
                           >
-                            <template #fallback>
-                              <span class="text-xs font-bold uppercase">{{
-                                getInitial(member.user.name)
-                              }}</span>
-                            </template>
                           </UAvatar>
                           <div class="text-sm font-medium p-2">
                             {{ member.user.email }}
@@ -510,24 +634,33 @@
                 @change="toggleChecklist(item)"
                 class="ps-2.5"
               />
-              <div v-if="item.editing">
-                <UInput v-model="item.content" size="xs" />
-                <UButton size="xs" @click="saveChecklist(item)">Lưu</UButton>
-                <UButton size="xs" color="gray" @click="item.editing = false"
-                  >Hủy</UButton
-                >
-              </div>
-
-              <div v-else class="flex items-center gap-2">
+              <div
+                v-if="editingChecklistId !== item.id"
+                class="flex items-center gap-2 flex-1"
+              >
                 <span
                   :class="{ 'line-through text-gray-500': item.completed }"
-                  >{{ item.content }}</span
+                  @click="startEditingChecklist(item)"
+                  class="cursor-pointer w-full"
                 >
+                  {{ item.content }}
+                </span>
                 <UButton
                   size="xs"
                   icon="i-lucide-pencil"
-                  @click="item.editing = true"
+                  @click="startEditingChecklist(item)"
                   color="none"
+                />
+              </div>
+              <div v-else class="flex-1">
+                <UInput
+                  v-model="editingChecklistContent"
+                  size="xs"
+                  class="w-full"
+                  @blur="saveChecklistContent(item)"
+                  @keydown.enter.prevent="saveChecklistContent(item)"
+                  @keydown.esc.prevent="cancelEditChecklist"
+                  autofocus
                 />
               </div>
 
@@ -561,11 +694,6 @@
             class="text-sm mb-2"
           >
             <div class="flex items-center gap-1 mb-1">
-              <!-- <div
-                class="rounded-full bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold"
-              >
-                {{ getInitial(comment.User.name) }}
-              </div> -->
               <UAvatar
                 :src="
                   comment.User.avatar?.startsWith('http')
@@ -577,11 +705,6 @@
                 class="cursor-pointer"
                 size="xl"
               >
-                <template #fallback>
-                  <span class="text-xs font-bold uppercase">{{
-                    getInitial(comment.User.name)
-                  }}</span>
-                </template>
               </UAvatar>
               <div>
                 <div class="flex">
@@ -690,16 +813,29 @@ async function createList() {
   showCreateInput.value = false;
 }
 
-async function updateList(list) {
-  try {
-    await $fetch(`http://localhost:3001/api/lists/${list.id}`, {
-      method: "PUT",
-      body: { title: list.title },
-    });
-    list.editing = false;
-  } catch {
-    alert("Không thể cập nhật cột");
+const editingListId = ref(null);
+const editingListTitle = ref("");
+
+function startEditingList(list) {
+  editingListId.value = list.id;
+  editingListTitle.value = list.title;
+}
+
+async function saveList(list) {
+  if (!editingListTitle.value.trim() || editingListTitle.value === list.title) {
+    editingListId.value = null;
+    return;
   }
+  await $fetch(`http://localhost:3001/api/lists/${list.id}`, {
+    method: "PUT",
+    body: { title: editingListTitle.value.trim() },
+  });
+  list.title = editingListTitle.value.trim();
+  editingListId.value = null;
+}
+
+function cancelEditList() {
+  editingListId.value = null;
 }
 
 async function deleteList(id) {
@@ -713,7 +849,23 @@ async function deleteList(id) {
     alert("Không thể xoá cột");
   }
 }
+async function onListDrop() {
+  lists.value.forEach((list, index) => {
+    list.position = index;
+  });
 
+  await Promise.all(
+    lists.value.map((list) =>
+      $fetch(`http://localhost:3001/api/lists/${list.id}`, {
+        method: "PUT",
+        body: {
+          position: list.position,
+          title: list.title,
+        },
+      })
+    )
+  );
+}
 // --- Card ---
 async function createCard(list) {
   const position =
@@ -824,28 +976,7 @@ async function fetchComments(cardId) {
   );
   comments.value = data.value || [];
 }
-// avatar
-function getInitial(name) {
-  if (!name) return "?";
-  return name.trim().charAt(0).toUpperCase();
-}
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-function formatDateOnCard(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
+
 async function addComment() {
   if (!newComment.value.trim()) return;
   await $fetch(
@@ -859,7 +990,12 @@ async function addComment() {
     }
   );
   newComment.value = "";
-  fetchComments(selectedCard.value.ID);
+  await fetchComments(selectedCard.value.ID);
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.comments = [...comments.value];
+  }
 }
 
 // --- Checklist ---
@@ -884,17 +1020,42 @@ async function addChecklist() {
   );
   newChecklist.value = "";
   await fetchChecklist();
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.checklist_items = [...checklist.value];
+  }
 }
-async function saveChecklist(item) {
+
+const editingChecklistId = ref(null);
+const editingChecklistContent = ref("");
+
+function startEditingChecklist(item) {
+  editingChecklistId.value = item.id;
+  editingChecklistContent.value = item.content;
+}
+
+async function saveChecklistContent(item) {
+  if (
+    !editingChecklistContent.value.trim() ||
+    editingChecklistContent.value === item.content
+  ) {
+    editingChecklistId.value = null;
+    return;
+  }
   await $fetch(`http://localhost:3001/api/checklist/${item.id}`, {
     method: "PUT",
     body: {
-      content: item.content,
+      content: editingChecklistContent.value.trim(),
       completed: item.completed,
     },
   });
-  item.editing = false;
-  await fetchChecklist();
+  item.content = editingChecklistContent.value.trim();
+  editingChecklistId.value = null;
+}
+
+function cancelEditChecklist() {
+  editingChecklistId.value = null;
 }
 
 async function toggleChecklist(item) {
@@ -905,7 +1066,12 @@ async function toggleChecklist(item) {
       completed: item.completed,
     },
   });
-  await fetchChecklist();
+  // await fetchChecklist();
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.checklist_items = [...checklist.value];
+  }
 }
 
 async function deleteChecklist(id) {
@@ -914,6 +1080,11 @@ async function deleteChecklist(id) {
     method: "DELETE",
   });
   await fetchChecklist();
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.checklist_items = [...checklist.value];
+  }
 }
 
 // description
@@ -1013,7 +1184,49 @@ const formattedDates = computed(() => {
 
   return `${startDateStr} || ${endTimeStr}  ${endDateStr}`;
 });
+watch(tempEndDate, (newEnd) => {
+  if (!newEnd) return;
+  if (!tempStartDate.value) return;
 
+  const start = new Date(tempStartDate.value);
+  const end = new Date(newEnd);
+
+  if (end <= start) {
+    const newStart = new Date(end);
+    newStart.setDate(newStart.getDate() - 1);
+    tempStartDate.value = newStart.toISOString().slice(0, 10);
+  }
+});
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+function formatDateOnCard(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+watch(tempStartDate, (newStart) => {
+  if (!newStart) return;
+  if (!tempEndDate.value) return;
+
+  const start = new Date(newStart);
+  const end = new Date(tempEndDate.value);
+
+  if (start >= end) {
+    const newEnd = new Date(start);
+    newEnd.setDate(newEnd.getDate() + 1);
+    tempEndDate.value = newEnd.toISOString().slice(0, 10);
+  }
+});
 const dateStatus = computed(() => {
   if (!selectedCard.value) return "normal";
   if (selectedCard.value.completed) return "completed";
@@ -1043,6 +1256,21 @@ function getDateStatusColor(card) {
   if (diff <= 1) return "bg-yellow-200";
 
   return "bg-gray-100";
+}
+function tooltipDate(card) {
+  if (!card) return "Thẻ chưa hết hạn";
+  if (card.completed) return "Thẻ này đã hoàn tất";
+  if (!card.end_date) return "Thẻ chưa hết hạn";
+
+  const now = new Date();
+  const end = new Date(card.end_date);
+
+  if (now > end) return "Thẻ đã hết hạn";
+
+  const diff = Math.floor((end.getTime() - now.getTime()) / (1000 * 60 * 60));
+  if (diff <= 24) return `Thẻ sẽ hết hạn trong ${diff} giờ`;
+
+  return "Thẻ chưa hết hạn";
 }
 
 const members = ref([]);
@@ -1081,6 +1309,11 @@ async function addMember() {
   );
   selectedUserId.value = null;
   await fetchMembers();
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.members = [...members.value];
+  }
 }
 
 async function removeMember(member) {
@@ -1092,67 +1325,135 @@ async function removeMember(member) {
     }
   );
   await fetchMembers();
+  const list = lists.value.find((l) => l.id === selectedCard.value.list_id);
+  const card = list?.cards.find((c) => c.ID === selectedCard.value.ID);
+  if (card) {
+    card.members = [...members.value];
+  }
 }
 const props = defineProps(["card"]);
 
-
 const filter = reactive({
-  keyword: '',
+  keyword: "",
   completed: false,
   incompleted: false,
   noDueDate: false,
   dueTomorrow: false,
-  overdue: false
+  overdue: false,
+  expireNextWeek: false,
+  expireNextMonth: false,
+  noMembers: false,
+  // assignedToMe: false,
+  // memberId: null,
 });
 
 function checkVisible(card) {
-  if (filter.keyword && !card.title.toLowerCase().includes(filter.keyword.toLowerCase())) {
+  if (
+    filter.keyword &&
+    !card.title.toLowerCase().includes(filter.keyword.toLowerCase())
+  ) {
     return false;
   }
 
-  if (filter.completed  && !card.completed) return false;
-if (filter.incompleted  && card.completed) return false;
+  if (filter.completed && !card.completed) return false;
+  if (filter.incompleted && card.completed) return false;
 
   const now = new Date();
   const end = card.end_date ? new Date(card.end_date) : null;
-  const diff = end ? (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24) : null;
 
   const matchDueFilters = [];
 
   if (filter.noDueDate) {
     matchDueFilters.push(!end);
   }
+
   if (filter.dueTomorrow) {
-    matchDueFilters.push(end && diff <= 1 && diff > 0);
+    if (end) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+
+      matchDueFilters.push(end >= tomorrow && end < dayAfterTomorrow);
+    }
   }
+
   if (filter.overdue) {
     matchDueFilters.push(end && now > end && !card.completed);
+  }
+
+  if (filter.expireNextWeek && end) {
+    const nextWeekStart = new Date(now);
+    nextWeekStart.setDate(now.getDate() + (8 - now.getDay()));
+    nextWeekStart.setHours(0, 0, 0, 0);
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    nextWeekEnd.setHours(23, 59, 59, 999);
+    matchDueFilters.push(end >= nextWeekStart && end <= nextWeekEnd);
+  }
+
+  if (filter.expireNextMonth && end) {
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    nextMonthEnd.setHours(23, 59, 59, 999);
+    matchDueFilters.push(end >= nextMonthStart && end <= nextMonthEnd);
   }
 
   if (
     filter.noDueDate ||
     filter.dueTomorrow ||
+    filter.expireNextWeek ||
+    filter.expireNextMonth ||
     filter.overdue
   ) {
-    // Nếu có tick ít nhất 1 filter ngày, phải match ít nhất 1
     if (!matchDueFilters.some(Boolean)) return false;
   }
 
-  return true;
+  if (!filter.noMembers && !filter.assignedToMe && !filter.memberId)
+    return true;
+
+  if (filter.noMembers && (!card.members || card.members.length === 0)) {
+    return true;
+  }
+  
+  return false;
 }
 watch(
   () => filter.completed,
   (val) => {
-    if (val) filter.incompleted = false
+    if (val) filter.incompleted = false;
   }
-)
+);
 
 watch(
   () => filter.incompleted,
   (val) => {
-    if (val) filter.completed = false
+    if (val) filter.completed = false;
   }
-)
-
-
+);
+watch(
+  () => filter.dueTomorrow,
+  (val) => {
+    if (val) {
+      (filter.expireNextWeek = false), (filter.expireNextMonth = false);
+    }
+  }
+);
+watch(
+  () => filter.expireNextWeek,
+  (val) => {
+    if (val) {
+      (filter.dueTomorrow = false), (filter.expireNextMonth = false);
+    }
+  }
+);
+watch(
+  () => filter.expireNextMonth,
+  (val) => {
+    if (val) {
+      (filter.dueTomorrow = false), (filter.expireNextWeek = false);
+    }
+  }
+);
 </script>

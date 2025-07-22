@@ -7,7 +7,7 @@ import (
 type Comment struct {
 	gorm.Model
 	Content   string    `json:"content"`
-	CardID    uint      `json:"card_id"`
+	CardID    uint      `json:"CardID"`
 	UserID    uint      
 	User    User `gorm:"foreignKey:UserID"`
 }
