@@ -16,6 +16,7 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/users", controllers.GetAllUsers)
 
 	api.Get("/boards/:id", controllers.GetBoardByID)
+	api.Get("/boards/:id/members", controllers.GetBoardMembers)
 
 	api.Post("/lists", controllers.CreateList)
 	api.Get("/boards/:id/lists", controllers.GetListsByBoardID)
@@ -30,6 +31,9 @@ func SetupRoutes(app *fiber.App) {
 
 	api.Post("/cards/:card_id/comments", controllers.CreateComment)
 	api.Get("/cards/:card_id/comments", controllers.GetComments)
+	api.Put("/cards/:card_id/comments/:id", controllers.UpdateComment)
+	api.Delete("/cards/:card_id/comments/:id", controllers.DeleteComment)
+
 
 	api.Get("/cards/:card_id/checklist", controllers.GetChecklistItems)
 	api.Post("/cards/:card_id/checklist", controllers.CreateChecklistItem)

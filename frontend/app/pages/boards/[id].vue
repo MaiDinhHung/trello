@@ -36,7 +36,7 @@
               />
             </div>
             <div class="">
-            <h2 class="mb-2">Thành viên</h2>
+              <h2 class="mb-2">Thành viên</h2>
               <UCheckbox
                 v-model="filter.noMembers"
                 label="Không có thành viên"
@@ -44,19 +44,46 @@
                 font="xl"
                 class="mb-2"
               />
-              <!-- <UCheckbox
+              <UCheckbox
                 v-model="filter.assignedToMe"
                 label="Được chỉ định cho tôi"
                 size="xl"
                 font="xl"
                 class="mb-2"
-              />
-              <USelectMenu
-                v-model="filter.memberId"
-                :items="allUsersOptions"
-                placeholder="Chọn thành viên"
-                
-              /> -->
+              />  
+
+              <!-- <div class="flex items-center mb-1">
+                <UCheckbox class="me-2.5" size="xl" />
+                <USelectMenu
+                  v-model="filter.memberIds"
+                  :items="listuseroption"
+                  multiple
+                  value-attribute="value"
+                  option-attribute="name"
+                  placeholder="Chọn thành viên"
+                >
+                  <template #option="{ option, selected }">
+                    <div class="flex items-center gap-3">
+                      <UCheckbox :model-value="selected" class="pointer-events-none" />
+                      <UAvatar :src="option.avatar" :alt="option.name" size="xs" />
+                      <div class="flex flex-col">
+                        <span class="text-sm font-medium">{{ option.name }}</span>
+                        <span class="text-xs text-gray-500">{{ option.email }}</span>
+                      </div>
+                    </div>
+                  </template>
+
+                  <template #label>
+                    <span class="text-sm">
+                      {{ filter.memberIds.length === 0
+                        ? 'Chọn thành viên'
+                        : `${filter.memberIds.length} thành viên được chọn` }}
+                    </span>
+                  </template>
+                </USelectMenu>
+              </div> -->
+
+              <p class="text-[13px] text-gray-600 mb-3">Tìm kiếm các thẻ, các thành viên, các nhãn và hơn thế nữa.</p>
               <h2 class="mb-2">Trạng thái</h2>
               <UCheckbox
                 v-model="filter.completed"
@@ -108,7 +135,6 @@
                 font="xl"
                 class="mb-4"
               ></UCheckbox>
-              
             </div>
           </template>
         </UPopover>
@@ -145,7 +171,7 @@
                   v-if="editingListId !== element.id"
                   class="flex justify-between w-full"
                 >
-                  <h3 class="font-extrabold text-xl truncate cursor-pointer">
+                  <h3 class="font-extrabold text-xl truncate cursor-pointer break-words">
                     {{ element.title }}
                   </h3>
                   <div class="flex gap-1 opacity-0 group-hover:opacity-100">
@@ -252,7 +278,7 @@
                     </div>
 
                     <!-- Dates -->
-                    <div class="flex items-center">
+                    <div class="flex items-center" @click="openCard(card)">
                       <UTooltip :text="tooltipDate(card)">
                         <div
                           class="text-xs text-gray-500 flex items-center gap-1 me-1.5"
@@ -286,7 +312,7 @@
                     </div>
 
                     <!-- Checklist + comment count -->
-                    <div class="text-xs text-gray-500 flex items-center gap-2">
+                    <div class="text-xs text-gray-500 flex items-center gap-2" @click="openCard(card)">
                       <UTooltip
                         v-if="card.checklist_items?.length"
                         text="Mục trong danh sách công việc"
@@ -328,7 +354,7 @@
                     </div>
 
                     <!-- Members -->
-                    <UTooltip v-if="card.members?.length" text="Thành viên">
+                    <UTooltip v-if="card.members?.length" text="Thành viên" @click="openCard(card)">
                       <div class="flex justify-end">
                         <UAvatarGroup :max="3" size="4xs" class="pe-2">
                           <UAvatar
@@ -396,6 +422,8 @@
       </div>
     </div>
   </div>
+
+  <!-- showCardModal -->
   <UModal
     v-model:open="showCardModal"
     :title="selectedCard?.title"
@@ -445,7 +473,6 @@
                       class="rounded-full"
                       size="xl"
                     />
-
                     <template #content>
                       <h4 class="text-center pt-3"><b>Thành viên</b></h4>
                       <div class="p-3">
@@ -686,11 +713,14 @@
         <!-- Ngăn cách -->
         <div class="hidden md:block w-px bg-gray-300"></div>
         <!-- Bên phải: Bình luận -->
-        <div class="md:w-1/4 w-full pl-4">
-          <h3 class="font-semibold pb-3">Nhận xét</h3>
+        <div class="md:w-2/4 w-full pl-4">
+          <div class="flex items-center pb-3">
+            <UIcon name="i-lucide-message-circle" />
+            <h3 class="font-semibold ms-1.5">Nhận xét hoạt động</h3>
+          </div>
           <div
             v-for="comment in comments"
-            :key="comment.id"
+            :key="comment.ID"
             class="text-sm mb-2"
           >
             <div class="flex items-center gap-1 mb-1">
@@ -704,18 +734,57 @@
                 :ui="{ rounded: 'full' }"
                 class="cursor-pointer"
                 size="xl"
-              >
-              </UAvatar>
-              <div>
-                <div class="flex">
-                  <span class="font-semibold">{{ comment.User.name }}:</span>
-                  <p class="text-black ps-1">{{ comment.content }}</p>
+              />
+              <div class="flex items-center w-full">
+                <span class="font-bold text-black">{{
+                  comment.User.name
+                }}</span>
+                <div class="items-center gap-1 ms-5">
+                  <span class="text-blue-500 text-xs underline font-mono">{{
+                    formatDate(comment.CreatedAt)
+                  }}</span>
+                  <span
+                    v-if="isEdited(comment)"
+                    class="italic text-gray-400 text-[11px] ms-1"
+                    >(đã sửa)</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Nội dung bl -->
+            <div>
+              <template v-if="editingCommentId === comment.ID">
+                <UInput
+                  v-model="editedContent"
+                  @keyup.enter="saveComment(comment.ID)"
+                  size="xs"
+                  class="w-full ms-8"
+                />
+              </template>
+              <template v-else>
+                <div class="bg-old-neutral-100 ms-8 rounded-xl p-2 max-w-[260px]">
+                  <p class="text-black break-words">{{ comment.content }}</p>
                 </div>
 
-                <span class="text-gray-500 font-mono">{{
-                  formatDate(comment.CreatedAt)
-                }}</span>
-              </div>
+                <div
+                  v-if="comment.UserID === user.id"
+                  class="flex gap-1 text-xs text-gray-500 ms-10 mt-1"
+                >
+                  <span
+                    class="cursor-pointer hover:underline me-2"
+                    @click="startEditingcmt(comment)"
+                  >
+                    Chỉnh sửa
+                  </span>
+                  <span
+                    class="cursor-pointer hover:underline"
+                    @click="deleteComment(comment.ID)"
+                  >
+                    Xóa
+                  </span>
+                </div>
+              </template>
             </div>
           </div>
           <div class="mt-2 flex gap-2">
@@ -763,12 +832,14 @@ function logout() {
   localStorage.clear();
   router.push("/login");
 }
-
+const currentUserId = ref(null);
 // --- Fetch board + list ---
 onMounted(async () => {
   const saved = localStorage.getItem("user");
   if (!saved) return router.push("/login");
   user.value = JSON.parse(saved);
+
+  currentUserId.value = user.value.id;
 
   const { data: boardData } = await useFetch(
     `http://localhost:3001/api/boards/${boardId}`
@@ -790,12 +861,15 @@ onMounted(async () => {
 // --- List ---
 async function createList() {
   if (!newListTitle.value.trim()) return;
-
+    const position = lists.value.length > 0
+    ? Math.max(...lists.value.map(l => l.position)) + 1
+    : 0;
   const { data, error } = await useFetch("http://localhost:3001/api/lists", {
     method: "POST",
     body: {
       title: newListTitle.value,
       board_id: parseInt(boardId),
+      position,
     },
   });
 
@@ -868,10 +942,14 @@ async function onListDrop() {
 }
 // --- Card ---
 async function createCard(list) {
+  const title = list.newCardTitle.trim();
+  if (!title){
+    return;
+  }
   const position =
     list.cards.length > 0 ? list.cards[list.cards.length - 1].position + 1 : 0;
   const payload = {
-    title: list.newCardTitle,
+    title,
     list_id: list.id,
     position,
     description: "",
@@ -996,6 +1074,50 @@ async function addComment() {
   if (card) {
     card.comments = [...comments.value];
   }
+}
+
+const editingCommentId = ref(null);
+const editedContent = ref("");
+
+function startEditingcmt(comment) {
+  editingCommentId.value = comment.ID;
+  editedContent.value = comment.content;
+}
+
+async function saveComment(id) {
+  if (!editedContent.value.trim()) return;
+  await $fetch(
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/comments/${id}`,
+    {
+      method: "PUT",
+      body: {
+        content: editedContent.value,
+      },
+    }
+  );
+  editingCommentId.value = null;
+  editedContent.value = "";
+  await fetchComments(selectedCard.value.ID);
+}
+
+async function deleteComment(id) {
+  const ok = confirm("Bạn có chắc muốn xoá bình luận?");
+  if (!ok) return;
+
+  await $fetch(
+    `http://localhost:3001/api/cards/${selectedCard.value.ID}/comments/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+  await fetchComments(selectedCard.value.ID);
+}
+function isEdited(comment) {
+  return (
+    new Date(comment.UpdatedAt).getTime() -
+      new Date(comment.CreatedAt).getTime() >
+    1000
+  );
 }
 
 // --- Checklist ---
@@ -1199,14 +1321,33 @@ watch(tempEndDate, (newEnd) => {
 });
 function formatDate(dateStr) {
   const date = new Date(dateStr);
-  return date.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const now = new Date();
+  const diffMs = now - date;
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec <= 60) {
+    return "vừa xong";
+  } else if (diffMin < 60) {
+    return `${diffMin} phút trước`;
+  } else if (diffHour < 24) {
+    return `${diffHour} giờ trước`;
+  } else if (diffDay <= 3) {
+    return `${diffDay} ngày trước`;
+  } else {
+    return date.toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }
 }
+
 function formatDateOnCard(dateStr) {
   const date = new Date(dateStr);
   return date.toLocaleString("vi-VN", {
@@ -1343,10 +1484,29 @@ const filter = reactive({
   expireNextWeek: false,
   expireNextMonth: false,
   noMembers: false,
-  // assignedToMe: false,
-  // memberId: null,
+  assignedToMe: false,
+  memberIds: null,
 });
 
+const listmembers = ref([]);
+
+onMounted(async () => {
+  const { data } = await useFetch(`http://localhost:3001/api/boards/${boardId}/members`);
+  listmembers.value = data.value || [];
+});
+
+const listuseroption = computed(() =>
+  listmembers.value.map(m => ({
+    value: m.ID,
+    name: m.name,
+    avatar: m.avatar,
+    email: m.email
+  }))
+);
+
+// watchEffect(() => {
+//   console.log("listuseroption", listuseroption.value);
+// });
 function checkVisible(card) {
   if (
     filter.keyword &&
@@ -1384,8 +1544,11 @@ function checkVisible(card) {
   }
 
   if (filter.expireNextWeek && end) {
-    const nextWeekStart = new Date(now);
-    nextWeekStart.setDate(now.getDate() + (8 - now.getDay()));
+    const nowDate = new Date(now);
+    const dayOfWeek = nowDate.getDay();
+    const daysUntilNextMonday = (8 - dayOfWeek) % 7 || 7;
+    const nextWeekStart = new Date(nowDate);
+    nextWeekStart.setDate(nowDate.getDate() + daysUntilNextMonday);
     nextWeekStart.setHours(0, 0, 0, 0);
     const nextWeekEnd = new Date(nextWeekStart);
     nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
@@ -1410,15 +1573,33 @@ function checkVisible(card) {
     if (!matchDueFilters.some(Boolean)) return false;
   }
 
-  if (!filter.noMembers && !filter.assignedToMe && !filter.memberId)
-    return true;
 
-  if (filter.noMembers && (!card.members || card.members.length === 0)) {
-    return true;
-  }
-  
-  return false;
+if (!filter.noMembers && !filter.assignedToMe && !filter.memberIds) {
+  return true;
 }
+
+const currentId = Number(currentUserId.value);
+let matchMember = false;
+
+if (filter.noMembers) {
+  matchMember ||= !card.members || card.members.length === 0;
+}
+
+if (filter.assignedToMe) {
+  matchMember ||= card.members?.some((m) => Number(m.UserID) === currentId) ?? false;
+}
+
+if (filter.memberIds?.length) {
+  matchMember ||= card.members?.some((m) =>
+    filter.memberIds.includes(m.user?.id ?? m.UserID)
+  ) ?? false;
+}
+
+
+return matchMember;
+
+}
+
 watch(
   () => filter.completed,
   (val) => {

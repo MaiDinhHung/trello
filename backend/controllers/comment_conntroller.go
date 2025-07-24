@@ -48,6 +48,58 @@ func GetComments(c *fiber.Ctx) error {
 	return c.JSON(comments)
 }
 
+func UpdateComment(c *fiber.Ctx) error {
+	commentID := c.Params("ID")
+	cardID := parseUint(c.Params("card_id"))
+
+	var updated models.Comment
+	if err := c.BodyParser(&updated); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Không thể parse dữ liệu",
+		})
+	}
+
+	var comment models.Comment
+	if err := database.DB.
+		Where("id = ? AND card_id = ?", commentID, cardID).
+		First(&comment).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Không tìm thấy bình luận",
+		})
+	}
+
+	comment.Content = updated.Content
+	if err := database.DB.Save(&comment).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Không thể cập nhật bình luận",
+		})
+	}
+
+	return c.JSON(comment)
+}
+
+func DeleteComment(c *fiber.Ctx) error {
+	commentID := c.Params("ID")
+	cardID := parseUint(c.Params("card_id"))
+
+	var comment models.Comment
+	if err := database.DB.
+		Where("id = ? AND card_id = ?", commentID, cardID).
+		First(&comment).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Không tìm thấy bình luận",
+		})
+	}
+
+	if err := database.DB.Delete(&comment).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Không thể xoá bình luận",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // Helper: parse uint
 func parseUint(s string) uint {
 	var id uint

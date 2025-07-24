@@ -19,3 +19,22 @@ func GetBoardByID(c *fiber.Ctx) error {
 
 	return c.JSON(board)
 }
+func GetBoardMembers(c *fiber.Ctx) error {
+	boardId := c.Params("id")
+	var members []models.User
+
+	err := database.DB.
+		Raw(`
+			SELECT DISTINCT users.* FROM users
+			JOIN card_members ON card_members.user_id = users.id
+			JOIN cards ON cards.id = card_members.card_id
+			JOIN lists ON lists.id = cards.list_id
+			WHERE lists.board_id = ?
+		`, boardId).Scan(&members).Error
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Không thể lấy danh sách thành viên"})
+	}
+
+	return c.JSON(members)
+}
